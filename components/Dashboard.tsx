@@ -7,9 +7,10 @@
  * Manages widget positions, drag-and-drop, and resizing.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import GridLayout, { Layout } from 'react-grid-layout';
 import { useEventMesh } from '@/lib/event-mesh/mesh';
+import { useCheckpointManager, useUndoRedoShortcuts } from '@/lib/checkpoint/manager';
 import 'react-grid-layout/css/styles.css';
 import 'react-grid-layout/css/styles.css';
 
@@ -46,15 +47,73 @@ export function Dashboard({ userId }: DashboardProps) {
   const meshEnabled = useEventMesh((state) => state.enabled);
   const toggleSafeMode = useEventMesh((state) => state.toggleSafeMode);
 
+  // Checkpoint Manager state
+  const createCheckpoint = useCheckpointManager((state) => state.createCheckpoint);
+  const undo = useCheckpointManager((state) => state.undo);
+  const redo = useCheckpointManager((state) => state.redo);
+  const canUndo = useCheckpointManager((state) => state.canUndo());
+  const canRedo = useCheckpointManager((state) => state.canRedo());
+
+  // Toast notification state
+  const [toast, setToast] = useState<string | null>(null);
+
+  /**
+   * Show a toast notification
+   */
+  const showToast = useCallback((message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 2000);
+  }, []);
+
+  /**
+   * Create a checkpoint with current state
+   */
+  const saveCheckpoint = useCallback((description: string) => {
+    createCheckpoint({
+      timestamp: new Date(),
+      layout,
+      widgets,
+      description,
+    });
+  }, [layout, widgets, createCheckpoint]);
+
+  /**
+   * Handle undo
+   */
+  const handleUndo = useCallback(() => {
+    const snapshot = undo();
+    if (snapshot) {
+      setLayout(snapshot.layout);
+      setWidgets(snapshot.widgets);
+      showToast('↩️ Undo');
+    }
+  }, [undo, showToast]);
+
+  /**
+   * Handle redo
+   */
+  const handleRedo = useCallback(() => {
+    const snapshot = redo();
+    if (snapshot) {
+      setLayout(snapshot.layout);
+      setWidgets(snapshot.widgets);
+      showToast('↪️ Redo');
+    }
+  }, [redo, showToast]);
+
+  // Set up keyboard shortcuts (Cmd+Z, Cmd+Shift+Z)
+  useUndoRedoShortcuts(handleUndo, handleRedo);
+
   /**
    * Handle layout changes from drag/drop or resize
    */
   const handleLayoutChange = useCallback((newLayout: Layout[]) => {
     setLayout(newLayout);
-
-    // TODO: Save layout to Supabase
-    // This will be implemented when we add persistence
-  }, []);
+    // Create checkpoint after layout change
+    setTimeout(() => {
+      saveCheckpoint('Layout changed');
+    }, 500); // Debounce to avoid too many checkpoints during dragging
+  }, [saveCheckpoint]);
 
   /**
    * Add a new widget to the dashboard
@@ -79,15 +138,27 @@ export function Dashboard({ userId }: DashboardProps) {
 
     setWidgets([...widgets, newWidget]);
     setLayout([...layout, newLayoutItem]);
-  }, [widgets, layout]);
+
+    // Create checkpoint after adding widget
+    setTimeout(() => {
+      saveCheckpoint(`Added ${type} widget`);
+    }, 100);
+  }, [widgets, layout, saveCheckpoint]);
 
   /**
    * Remove a widget from the dashboard
    */
   const removeWidget = useCallback((widgetId: string) => {
+    const widget = widgets.find(w => w.id === widgetId);
+
     setWidgets(widgets.filter(w => w.id !== widgetId));
     setLayout(layout.filter(l => l.i !== widgetId));
-  }, [widgets, layout]);
+
+    // Create checkpoint after removing widget
+    setTimeout(() => {
+      saveCheckpoint(`Removed ${widget?.type || 'widget'}`);
+    }, 100);
+  }, [widgets, layout, saveCheckpoint]);
 
   /**
    * Render a widget based on its type
@@ -126,6 +197,35 @@ export function Dashboard({ userId }: DashboardProps) {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Undo/Redo Buttons */}
+            <div className="flex items-center gap-1 border rounded-md">
+              <button
+                onClick={handleUndo}
+                disabled={!canUndo}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${
+                  canUndo
+                    ? 'hover:bg-accent text-foreground'
+                    : 'text-muted-foreground cursor-not-allowed'
+                }`}
+                title="Undo (Cmd+Z)"
+              >
+                ↩️ Undo
+              </button>
+              <div className="w-px h-6 bg-border" />
+              <button
+                onClick={handleRedo}
+                disabled={!canRedo}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${
+                  canRedo
+                    ? 'hover:bg-accent text-foreground'
+                    : 'text-muted-foreground cursor-not-allowed'
+                }`}
+                title="Redo (Cmd+Shift+Z)"
+              >
+                ↪️ Redo
+              </button>
+            </div>
+
             {/* Safe Mode Toggle */}
             <button
               onClick={toggleSafeMode}
@@ -194,6 +294,15 @@ export function Dashboard({ userId }: DashboardProps) {
           ))}
         </GridLayout>
       </main>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-foreground text-background px-4 py-2 rounded-md shadow-lg text-sm font-medium animate-in fade-in slide-in-from-bottom-2">
+            {toast}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
