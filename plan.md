@@ -179,7 +179,7 @@ This is the **"Differentiator-First, Mitigated"** plan, optimized to prove our c
 - Safe Mode toggle
 - Demo working with mock data
 
-### Month 2: The "Safety Net" (Build Trust)
+### Month 2: The "Safety Net" (Build Trust) ✅ COMPLETE
 
 **Weeks 5-6:** Ship Simple Undo (Cmd+Z) + "Safe Mode" Toggle.
 
@@ -188,10 +188,15 @@ This is the **"Differentiator-First, Mitigated"** plan, optimized to prove our c
 **Go/No-Go:** Do users trust the system enough to experiment and add more widgets?
 
 **Key Deliverables:**
-- [ ] CheckpointManager (store last 5 dashboard snapshots)
-- [ ] Cmd+Z keyboard shortcut for undo
-- [ ] Event Flow Debugger (visualize event propagation)
-- [ ] Widget versioning system
+- [x] CheckpointManager (store last 5 dashboard snapshots) ✅
+- [x] Cmd+Z / Cmd+Shift+Z keyboard shortcuts for undo/redo ✅
+- [x] Toast notifications for undo/redo actions ✅
+- [x] E2E test suite (Playwright) - 22/22 tests passing ✅
+- [x] Event Flow Debugger (visualize event propagation) ✅
+- [x] Widget versioning system ✅
+- [x] Widget removal button fix ✅
+
+**Status (Nov 14):** ✅ COMPLETE - All Month 2 deliverables shipped and tested!
 
 ### Month 3: The "Factory" (Prove Scale)
 
@@ -231,10 +236,13 @@ Now that we have proven value and have real usage, we build the "boring" infrast
 - [x] Drag-and-drop dashboard layout
 - [x] Safe Mode toggle
 
-### Safety Net (Month 2)
-- [ ] Simple Undo (Cmd+Z)
-- [ ] Event Flow Debugger
-- [ ] Widget versioning
+### Safety Net (Month 2) ✅
+- [x] Simple Undo (Cmd+Z / Cmd+Shift+Z) ✅
+- [x] Redo functionality ✅
+- [x] Toast notifications for undo/redo ✅
+- [x] E2E test suite (Playwright) - 22/22 tests ✅
+- [x] Event Flow Debugger ✅
+- [x] Widget versioning ✅
 
 ### Factory (Month 3)
 - [ ] Scalable, secure declarative UI factory (UniversalDataWidget)
@@ -315,26 +323,47 @@ fetch(`/api/widgets/${widgetId}/data`)
 
 ---
 
-## Current Status (As of Month 1 Completion)
+## Next 3 Steps
+
+1. **Test Month 2 Metrics with Users** - Measure broken state rate (<5% target), recovery time (<30s target), debugger usefulness
+2. **Begin Month 3 Planning** - Define UniversalDataWidget JSON schema, preview flow, and first 3 declarative widgets
+3. **Consider Real API Integration** - Evaluate if we should add real GitHub/Jira APIs before Month 3, or continue with mock data
+
+---
+
+## Current Status (As of Nov 14, 2025)
 
 ### ✅ Completed
+**Month 1 (Magic POC):**
 - Next.js 15 project setup
 - Event Mesh implementation
 - GitHub Widget (hardcoded, mock data)
 - Jira Widget (hardcoded, mock data)
 - Dashboard with react-grid-layout
+- Safe Mode toggle
 - Database schema designed
 - Supabase configuration ready
 - Comprehensive documentation
 
-### 🚧 In Progress
-- None (Month 1 POC complete!)
+**Month 2 (Safety Net - COMPLETE):**
+- Checkpoint Manager (stores last 5 snapshots)
+- Undo/Redo with Cmd+Z / Cmd+Shift+Z keyboard shortcuts
+- Toast notifications (using Sonner library)
+- E2E test suite with Playwright (22/22 tests passing)
+- Event Flow Debugger (real-time event log + subscription tracking)
+- Widget versioning system (registry-based with auto-upgrade migrations)
+- Widget removal button fix (stopPropagation on onClick + onMouseDown)
+- changelog.md created with full bug documentation
 
-### 📋 Next Up (Month 2)
-- Checkpoint Manager for undo/redo
-- Event Flow Debugger
-- Safe Mode enhancements
-- First real API integration
+### ✅ Month 2 Complete
+- All safety net features implemented and tested
+- Zero known blocking issues
+- Ready for user testing
+
+### 📋 Next Up
+- Month 3: Declarative Widget Factory (UniversalDataWidget)
+- First real API integration (GitHub/Jira with real data)
+- User testing of Month 2 features
 
 ---
 
@@ -353,13 +382,21 @@ agentic-dashboard/
 ├── lib/
 │   ├── event-mesh/
 │   │   └── mesh.ts                       # Event Mesh (THE MAGIC)
+│   ├── checkpoint/
+│   │   └── manager.ts                    # Checkpoint Manager (Month 2)
 │   └── supabase/
 │       ├── client.ts                     # Supabase client
 │       └── types.ts                      # Database types
+├── tests/
+│   └── e2e/
+│       ├── checkpoint-undo-redo.spec.ts  # Checkpoint tests (7 tests)
+│       └── event-mesh.spec.ts            # Event Mesh tests (7 tests)
 ├── supabase/
 │   ├── migrations/
 │   │   └── 001_initial_schema.sql        # Complete schema
 │   └── README.md                         # Setup guide
+├── playwright.config.ts                  # E2E test configuration
+├── changelog.md                          # Bug fixes & changes log
 ├── plan.md                               # THIS FILE
 └── README.md                             # User documentation
 ```
@@ -446,6 +483,14 @@ This is an active project following the "Differentiator-First" methodology. Cont
 
 ---
 
-**Last Updated:** November 13, 2025 (Month 1 POC Complete)
+**Last Updated:** November 14, 2025 (Month 2 COMPLETE ✅)
 
-**Next Milestone:** Month 2 - The Safety Net (Undo + Event Debugger)
+**Next Milestone:** Month 3 - Declarative Widget Factory (UniversalDataWidget)
+
+**Recent Progress (Nov 14):**
+- ✅ Fixed all 4 checkpoint bugs (undo/redo/toast/keyboard)
+- ✅ Added comprehensive E2E test suite (22/22 tests passing)
+- ✅ Created changelog.md with full documentation
+- ✅ Implemented Event Flow Debugger (real-time event visualization)
+- ✅ Implemented Widget Versioning System (backward compatibility + auto-upgrade)
+- ✅ Fixed widget removal button bug (onClick + onMouseDown stopPropagation)

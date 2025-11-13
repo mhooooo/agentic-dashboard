@@ -1,4 +1,4 @@
-# Agentic Dashboard
+1# Agentic Dashboard
 
 > **An AI-powered dashboard where widgets are interconnected and context-aware.**
 

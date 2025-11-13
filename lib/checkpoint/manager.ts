@@ -7,6 +7,7 @@
  * This is the "safety net" that lets users experiment without fear.
  */
 
+import React from 'react';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { Layout } from 'react-grid-layout';
@@ -181,13 +182,13 @@ export function useUndoRedoShortcuts(
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Cmd+Z (Mac) or Ctrl+Z (Windows/Linux)
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         e.preventDefault();
         onUndo();
       }
 
       // Cmd+Shift+Z (Mac) or Ctrl+Shift+Z (Windows/Linux)
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && e.shiftKey) {
         e.preventDefault();
         onRedo();
       }
@@ -203,5 +204,3 @@ export function useUndoRedoShortcuts(
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onUndo, onRedo]);
 }
-
-import React from 'react';

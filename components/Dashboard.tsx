@@ -7,28 +7,28 @@
  * Manages widget positions, drag-and-drop, and resizing.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import GridLayout, { Layout } from 'react-grid-layout';
 import { useEventMesh } from '@/lib/event-mesh/mesh';
 import { useCheckpointManager, useUndoRedoShortcuts } from '@/lib/checkpoint/manager';
+import { toast as sonnerToast, Toaster } from 'sonner';
 import 'react-grid-layout/css/styles.css';
 import 'react-grid-layout/css/styles.css';
 
 // Widget imports
 import { GitHubWidget } from './widgets/GitHubWidget';
 import { JiraWidget } from './widgets/JiraWidget';
+import { EventFlowDebugger } from './EventFlowDebugger';
+
+// Widget versioning system
+import {
+  type WidgetInstance,
+  createWidgetInstance,
+  normalizeWidgetInstances,
+} from '@/lib/widgets';
 
 interface DashboardProps {
   userId: string;
-}
-
-/**
- * Widget Instance
- */
-interface WidgetInstance {
-  id: string;
-  type: string;
-  config: Record<string, any>;
 }
 
 export function Dashboard({ userId }: DashboardProps) {
@@ -40,8 +40,17 @@ export function Dashboard({ userId }: DashboardProps) {
 
   // Widget instances (what widgets are on the dashboard)
   const [widgets, setWidgets] = useState<WidgetInstance[]>([
-    { id: 'welcome', type: 'welcome', config: {} },
+    { id: 'welcome', type: 'welcome', version: 1, config: {} },
   ]);
+
+  // Ref to track if we're currently restoring from a checkpoint
+  const isRestoringRef = useRef(false);
+
+  // Ref to track if initial checkpoint was created
+  const initialCheckpointCreated = useRef(false);
+
+  // Event Flow Debugger state
+  const [debuggerOpen, setDebuggerOpen] = useState(false);
 
   // Event Mesh state (for Safe Mode toggle)
   const meshEnabled = useEventMesh((state) => state.enabled);
@@ -54,95 +63,129 @@ export function Dashboard({ userId }: DashboardProps) {
   const canUndo = useCheckpointManager((state) => state.canUndo());
   const canRedo = useCheckpointManager((state) => state.canRedo());
 
-  // Toast notification state
-  const [toast, setToast] = useState<string | null>(null);
-
-  /**
-   * Show a toast notification
-   */
-  const showToast = useCallback((message: string) => {
-    setToast(message);
-    setTimeout(() => setToast(null), 2000);
-  }, []);
-
   /**
    * Create a checkpoint with current state
+   * Now accepts state as parameters to avoid closure issues
    */
-  const saveCheckpoint = useCallback((description: string) => {
+  const saveCheckpoint = useCallback((
+    currentLayout: Layout[],
+    currentWidgets: WidgetInstance[],
+    description: string
+  ) => {
     createCheckpoint({
       timestamp: new Date(),
-      layout,
-      widgets,
+      layout: currentLayout,
+      widgets: currentWidgets,
       description,
     });
-  }, [layout, widgets, createCheckpoint]);
+  }, [createCheckpoint]);
 
   /**
    * Handle undo
    */
   const handleUndo = useCallback(() => {
+    // Set flag BEFORE calling undo to prevent any checkpoint creation
+    isRestoringRef.current = true;
+
     const snapshot = undo();
     if (snapshot) {
+      // Normalize widgets to ensure they're at the latest version
+      const normalizedWidgets = normalizeWidgetInstances(snapshot.widgets);
+
       setLayout(snapshot.layout);
-      setWidgets(snapshot.widgets);
-      showToast('↩️ Undo');
+      setWidgets(normalizedWidgets);
+      sonnerToast.success('↩️ Undo');
+
+      // Clear the flag after state updates settle
+      setTimeout(() => {
+        isRestoringRef.current = false;
+      }, 200);
+    } else {
+      // If undo failed, clear the flag immediately
+      isRestoringRef.current = false;
     }
-  }, [undo, showToast]);
+  }, [undo]);
 
   /**
    * Handle redo
    */
   const handleRedo = useCallback(() => {
+    // Set flag BEFORE calling redo to prevent any checkpoint creation
+    isRestoringRef.current = true;
+
     const snapshot = redo();
     if (snapshot) {
+      // Normalize widgets to ensure they're at the latest version
+      const normalizedWidgets = normalizeWidgetInstances(snapshot.widgets);
+
       setLayout(snapshot.layout);
-      setWidgets(snapshot.widgets);
-      showToast('↪️ Redo');
+      setWidgets(normalizedWidgets);
+      sonnerToast.success('↪️ Redo');
+
+      // Clear the flag after state updates settle
+      setTimeout(() => {
+        isRestoringRef.current = false;
+      }, 200);
+    } else {
+      // If redo failed, clear the flag immediately
+      isRestoringRef.current = false;
     }
-  }, [redo, showToast]);
+  }, [redo]);
 
   // Set up keyboard shortcuts (Cmd+Z, Cmd+Shift+Z)
   useUndoRedoShortcuts(handleUndo, handleRedo);
+
+  // Create initial checkpoint on mount
+  useEffect(() => {
+    if (!initialCheckpointCreated.current) {
+      // Create initial checkpoint with the starting state
+      createCheckpoint({
+        timestamp: new Date(),
+        layout,
+        widgets,
+        description: 'Initial state',
+      });
+      initialCheckpointCreated.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   /**
    * Handle layout changes from drag/drop or resize
    */
   const handleLayoutChange = useCallback((newLayout: Layout[]) => {
     setLayout(newLayout);
-    // Create checkpoint after layout change
-    setTimeout(() => {
-      saveCheckpoint('Layout changed');
-    }, 500); // Debounce to avoid too many checkpoints during dragging
-  }, [saveCheckpoint]);
+
+    // TODO: Add checkpoint creation for user drag/drop/resize in Month 2+
+    // For now, only create checkpoints from explicit actions (add/remove widget)
+    // This prevents race conditions with programmatic changes
+  }, []);
 
   /**
    * Add a new widget to the dashboard
    */
   const addWidget = useCallback((type: string, config: Record<string, any>) => {
-    const id = crypto.randomUUID();
-
-    // Find a good position for the new widget
-    const newWidget: WidgetInstance = {
-      id,
-      type,
-      config,
-    };
+    // Create widget instance with current version
+    const newWidget = createWidgetInstance(type, config);
 
     const newLayoutItem: Layout = {
-      i: id,
+      i: newWidget.id,
       x: (widgets.length * 6) % 12, // Position in grid
       y: Infinity, // Place at bottom
       w: 6, // Default width: half the grid
       h: 4, // Default height
     };
 
-    setWidgets([...widgets, newWidget]);
-    setLayout([...layout, newLayoutItem]);
+    // Calculate new state
+    const updatedWidgets = [...widgets, newWidget];
+    const updatedLayout = [...layout, newLayoutItem];
 
-    // Create checkpoint after adding widget
-    setTimeout(() => {
-      saveCheckpoint(`Added ${type} widget`);
-    }, 100);
+    // Update state
+    setWidgets(updatedWidgets);
+    setLayout(updatedLayout);
+
+    // Create checkpoint immediately with the new state
+    saveCheckpoint(updatedLayout, updatedWidgets, `Added ${type} widget`);
   }, [widgets, layout, saveCheckpoint]);
 
   /**
@@ -151,13 +194,16 @@ export function Dashboard({ userId }: DashboardProps) {
   const removeWidget = useCallback((widgetId: string) => {
     const widget = widgets.find(w => w.id === widgetId);
 
-    setWidgets(widgets.filter(w => w.id !== widgetId));
-    setLayout(layout.filter(l => l.i !== widgetId));
+    // Calculate new state
+    const updatedWidgets = widgets.filter(w => w.id !== widgetId);
+    const updatedLayout = layout.filter(l => l.i !== widgetId);
 
-    // Create checkpoint after removing widget
-    setTimeout(() => {
-      saveCheckpoint(`Removed ${widget?.type || 'widget'}`);
-    }, 100);
+    // Update state
+    setWidgets(updatedWidgets);
+    setLayout(updatedLayout);
+
+    // Create checkpoint immediately with the new state
+    saveCheckpoint(updatedLayout, updatedWidgets, `Removed ${widget?.type || 'widget'}`);
   }, [widgets, layout, saveCheckpoint]);
 
   /**
@@ -226,6 +272,19 @@ export function Dashboard({ userId }: DashboardProps) {
               </button>
             </div>
 
+            {/* Event Flow Debugger Toggle */}
+            <button
+              onClick={() => setDebuggerOpen(!debuggerOpen)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors border ${
+                debuggerOpen
+                  ? 'bg-blue-100 text-blue-900 border-blue-300 hover:bg-blue-200'
+                  : 'bg-background text-foreground border-border hover:bg-accent'
+              }`}
+              title="Toggle Event Flow Debugger"
+            >
+              🐛 Debugger
+            </button>
+
             {/* Safe Mode Toggle */}
             <button
               onClick={toggleSafeMode}
@@ -279,8 +338,15 @@ export function Dashboard({ userId }: DashboardProps) {
                   </span>
                 </div>
                 <button
-                  onClick={() => removeWidget(widget.id)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeWidget(widget.id);
+                  }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  className="text-muted-foreground hover:text-foreground transition-colors z-10 relative"
                 >
                   ✕
                 </button>
@@ -295,14 +361,14 @@ export function Dashboard({ userId }: DashboardProps) {
         </GridLayout>
       </main>
 
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-foreground text-background px-4 py-2 rounded-md shadow-lg text-sm font-medium animate-in fade-in slide-in-from-bottom-2">
-            {toast}
-          </div>
-        </div>
-      )}
+      {/* Toast Notifications (Sonner) */}
+      <Toaster position="bottom-center" richColors />
+
+      {/* Event Flow Debugger */}
+      <EventFlowDebugger
+        isOpen={debuggerOpen}
+        onClose={() => setDebuggerOpen(false)}
+      />
     </div>
   );
 }
