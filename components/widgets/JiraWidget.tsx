@@ -31,55 +31,68 @@ interface JiraIssue {
   updated_at: string;
 }
 
-/**
- * Mock data - will be replaced with real API calls via backend proxy
- */
-const MOCK_ISSUES: JiraIssue[] = [
-  {
-    key: 'PROJ-123',
-    summary: 'Fix login bug on mobile devices',
-    status: 'In Progress',
-    priority: 'High',
-    assignee: 'Alice',
-    created_at: '2025-11-05T10:00:00Z',
-    updated_at: '2025-11-10T14:30:00Z',
-  },
-  {
-    key: 'PROJ-456',
-    summary: 'Implement dark mode across application',
-    status: 'To Do',
-    priority: 'Medium',
-    assignee: 'Bob',
-    created_at: '2025-11-08T09:00:00Z',
-    updated_at: '2025-11-09T10:15:00Z',
-  },
-  {
-    key: 'PROJ-789',
-    summary: 'Optimize database query performance',
-    status: 'In Review',
-    priority: 'High',
-    assignee: 'Alice',
-    created_at: '2025-11-03T14:00:00Z',
-    updated_at: '2025-11-07T09:20:00Z',
-  },
-  {
-    key: 'PROJ-234',
-    summary: 'Add unit tests for authentication module',
-    status: 'To Do',
-    priority: 'Low',
-    assignee: 'Charlie',
-    created_at: '2025-11-01T11:00:00Z',
-    updated_at: '2025-11-01T11:00:00Z',
-  },
-];
-
-export function JiraWidget({ project_key, jira_url }: JiraWidgetProps) {
+export function JiraWidget({ project_key = 'SCRUM', jira_url }: JiraWidgetProps) {
   const [filter, setFilter] = useState<string | null>(null);
   const [selectedIssue, setSelectedIssue] = useState<string | null>(null);
   const [lastEventSource, setLastEventSource] = useState<string | null>(null);
+  const [issues, setIssues] = useState<JiraIssue[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // TODO: Fetch real issues from backend proxy
-  const issues = MOCK_ISSUES;
+  /**
+   * Fetch real issues from Jira via backend proxy
+   */
+  useEffect(() => {
+    const fetchIssues = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch('/api/proxy/jira', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            endpoint: '/search/jql',
+            method: 'POST',
+            body: {
+              jql: `project = "${project_key}" ORDER BY updated DESC`,
+              maxResults: 50,
+            },
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.error?.message || 'Failed to fetch Jira issues');
+        }
+
+        // Transform Jira API response to our format
+        const jiraIssues: JiraIssue[] = result.data.issues.map((issue: any) => ({
+          key: issue.key,
+          summary: issue.fields.summary,
+          status: issue.fields.status.name,
+          priority: issue.fields.priority?.name || 'Medium',
+          assignee: issue.fields.assignee?.displayName || 'Unassigned',
+          created_at: issue.fields.created,
+          updated_at: issue.fields.updated,
+        }));
+
+        setIssues(jiraIssues);
+      } catch (err) {
+        console.error('[JiraWidget] Error fetching issues:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load Jira issues');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIssues();
+
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(fetchIssues, 60000);
+    return () => clearInterval(interval);
+  }, [project_key]);
 
   /**
    * Subscribe to GitHub PR selection events
@@ -191,7 +204,18 @@ export function JiraWidget({ project_key, jira_url }: JiraWidgetProps) {
 
       {/* Issue List */}
       <div className="flex-1 overflow-auto space-y-2">
-        {filteredIssues.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
+            Loading Jira issues...
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-32 text-sm">
+            <p className="text-red-600 mb-2">{error}</p>
+            <p className="text-muted-foreground text-xs">
+              Make sure you've connected your Jira credentials in Settings
+            </p>
+          </div>
+        ) : filteredIssues.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-sm text-muted-foreground">
             {filter ? (
               <>
