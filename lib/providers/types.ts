@@ -8,7 +8,7 @@
 /**
  * Supported provider names
  */
-export type ProviderName = 'github' | 'jira' | 'slack';
+export type ProviderName = 'github' | 'jira' | 'linear' | 'slack' | 'calendar';
 
 /**
  * Stored credentials for a provider

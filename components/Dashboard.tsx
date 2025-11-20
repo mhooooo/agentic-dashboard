@@ -19,6 +19,9 @@ import 'react-grid-layout/css/styles.css';
 import { GitHubWidget } from './widgets/GitHubWidget';
 import { JiraWidget } from './widgets/JiraWidget';
 import { EventFlowDebugger } from './EventFlowDebugger';
+import { WidgetSelector, type WidgetOption } from './WidgetSelector';
+import { UniversalDataWidget } from './UniversalDataWidget';
+import { loadWidgetDefinition } from '@/lib/universal-widget/loader';
 
 // Widget versioning system
 import {
@@ -43,14 +46,24 @@ export function Dashboard({ userId }: DashboardProps) {
     { id: 'welcome', type: 'welcome', version: 1, config: {} },
   ]);
 
+  // Loading state for database fetch
+  const [widgetsLoading, setWidgetsLoading] = useState(true);
+  const [widgetsLoaded, setWidgetsLoaded] = useState(false);
+
   // Ref to track if we're currently restoring from a checkpoint
   const isRestoringRef = useRef(false);
 
   // Ref to track if initial checkpoint was created
   const initialCheckpointCreated = useRef(false);
 
+  // Ref to store layout save timeout for debouncing
+  const layoutSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Event Flow Debugger state
   const [debuggerOpen, setDebuggerOpen] = useState(false);
+
+  // Widget Selector state
+  const [selectorOpen, setSelectorOpen] = useState(false);
 
   // Event Mesh state (for Safe Mode toggle)
   const meshEnabled = useEventMesh((state) => state.enabled);
@@ -62,6 +75,54 @@ export function Dashboard({ userId }: DashboardProps) {
   const redo = useCheckpointManager((state) => state.redo);
   const canUndo = useCheckpointManager((state) => state.canUndo());
   const canRedo = useCheckpointManager((state) => state.canRedo());
+
+  /**
+   * Load widgets from database on mount
+   */
+  useEffect(() => {
+    const loadWidgets = async () => {
+      try {
+        setWidgetsLoading(true);
+
+        const response = await fetch('/api/widgets');
+        if (!response.ok) {
+          throw new Error('Failed to load widgets');
+        }
+
+        const data = await response.json();
+        const loadedWidgets = data.widgets || [];
+
+        if (loadedWidgets.length > 0) {
+          // Build layout from loaded widgets
+          const loadedLayout = loadedWidgets.map((widget: WidgetInstance) => ({
+            i: widget.id,
+            x: widget.layout?.x ?? 0,
+            y: widget.layout?.y ?? Infinity,
+            w: widget.layout?.w ?? 6,
+            h: widget.layout?.h ?? 4,
+          }));
+
+          // Use database as source of truth - don't inject hardcoded widgets
+          setWidgets(loadedWidgets);
+          setLayout(loadedLayout);
+        } else {
+          // Only show welcome widget if NO widgets in database (first time user)
+          setWidgets([{ id: 'welcome', type: 'welcome', version: 1, config: {} }]);
+          setLayout([{ i: 'welcome', x: 0, y: 0, w: 6, h: 4 }]);
+        }
+
+        setWidgetsLoaded(true);
+      } catch (error) {
+        console.error('[Dashboard] Error loading widgets:', error);
+        // Continue with default widgets (welcome)
+        setWidgetsLoaded(true);
+      } finally {
+        setWidgetsLoading(false);
+      }
+    };
+
+    loadWidgets();
+  }, []);
 
   /**
    * Create a checkpoint with current state
@@ -156,15 +217,40 @@ export function Dashboard({ userId }: DashboardProps) {
   const handleLayoutChange = useCallback((newLayout: Layout[]) => {
     setLayout(newLayout);
 
-    // TODO: Add checkpoint creation for user drag/drop/resize in Month 2+
-    // For now, only create checkpoints from explicit actions (add/remove widget)
-    // This prevents race conditions with programmatic changes
-  }, []);
+    // Debounce layout saves to database - only save after user stops dragging (1 second delay)
+    if (layoutSaveTimeoutRef.current) {
+      clearTimeout(layoutSaveTimeoutRef.current);
+    }
+
+    layoutSaveTimeoutRef.current = setTimeout(() => {
+      // Save each widget's position to database
+      newLayout.forEach((layoutItem) => {
+        const widget = widgets.find(w => w.id === layoutItem.i);
+        if (widget && widget.id !== 'welcome') {
+          fetch(`/api/widgets/${widget.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              layout: {
+                x: layoutItem.x,
+                y: layoutItem.y,
+                w: layoutItem.w,
+                h: layoutItem.h,
+              },
+            }),
+          }).catch((error) => {
+            console.error('[Dashboard] Error saving layout:', error);
+            // Don't block UI on error
+          });
+        }
+      });
+    }, 1000); // Wait 1 second after user stops dragging
+  }, [widgets]);
 
   /**
    * Add a new widget to the dashboard
    */
-  const addWidget = useCallback((type: string, config: Record<string, any>) => {
+  const addWidget = useCallback(async (type: string, config: Record<string, any>) => {
     // Create widget instance with current version
     const newWidget = createWidgetInstance(type, config);
 
@@ -186,12 +272,39 @@ export function Dashboard({ userId }: DashboardProps) {
 
     // Create checkpoint immediately with the new state
     saveCheckpoint(updatedLayout, updatedWidgets, `Added ${type} widget`);
+
+    // Save to database (async, don't block UI)
+    try {
+      const response = await fetch('/api/widgets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: newWidget.id,
+          type: newWidget.type,
+          version: newWidget.version,
+          config: config,
+          layout: {
+            x: newLayoutItem.x,
+            y: newLayoutItem.y,
+            w: newLayoutItem.w,
+            h: newLayoutItem.h,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('[Dashboard] Failed to save widget to database');
+      }
+    } catch (error) {
+      console.error('[Dashboard] Error saving widget:', error);
+      // Don't show error to user - widget is still in local state
+    }
   }, [widgets, layout, saveCheckpoint]);
 
   /**
    * Remove a widget from the dashboard
    */
-  const removeWidget = useCallback((widgetId: string) => {
+  const removeWidget = useCallback(async (widgetId: string) => {
     const widget = widgets.find(w => w.id === widgetId);
 
     // Calculate new state
@@ -204,7 +317,47 @@ export function Dashboard({ userId }: DashboardProps) {
 
     // Create checkpoint immediately with the new state
     saveCheckpoint(updatedLayout, updatedWidgets, `Removed ${widget?.type || 'widget'}`);
+
+    // Delete from database (async, don't block UI)
+    // Skip database deletion for hardcoded widgets (welcome, etc.)
+    const isHardcodedWidget = widgetId === 'welcome' || widget?.type === 'welcome';
+
+    if (!isHardcodedWidget) {
+      try {
+        const response = await fetch(`/api/widgets/${widgetId}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          // Log only if it's not a 404 (widget already deleted or never existed)
+          if (response.status !== 404) {
+            console.error('[Dashboard] Failed to delete widget from database:', response.status);
+          }
+        }
+      } catch (error) {
+        console.error('[Dashboard] Error deleting widget:', error);
+        // Don't show error to user - widget is already removed from local state
+      }
+    }
   }, [widgets, layout, saveCheckpoint]);
+
+  /**
+   * Handle widget selection from the selector modal
+   */
+  const handleSelectWidget = useCallback((widgetOption: WidgetOption) => {
+    if (widgetOption.isUniversal) {
+      // Universal widget: load definition and add
+      const definition = loadWidgetDefinition(widgetOption.type);
+      if (definition) {
+        addWidget(widgetOption.type, { definition });
+      } else {
+        console.error(`Failed to load widget definition: ${widgetOption.type}`);
+      }
+    } else {
+      // Legacy hardcoded widget
+      addWidget(widgetOption.type, {});
+    }
+  }, [addWidget]);
 
   /**
    * Render a widget based on its type
@@ -221,6 +374,24 @@ export function Dashboard({ userId }: DashboardProps) {
         return <GitHubWidget {...widget.config} />;
       case 'jira':
         return <JiraWidget {...widget.config} />;
+
+      // Universal widgets (JSON-based)
+      case 'github-prs':
+      case 'linear-issues':
+      case 'slack-messages':
+      case 'calendar-events': {
+        const definition = loadWidgetDefinition(widget.type);
+        if (definition) {
+          return <UniversalDataWidget definition={definition} />;
+        } else {
+          return (
+            <div className="p-4 text-sm text-red-600">
+              Failed to load widget definition: {widget.type}
+            </div>
+          );
+        }
+      }
+
       default:
         return (
           <div className="p-4 text-sm text-muted-foreground">
@@ -272,6 +443,15 @@ export function Dashboard({ userId }: DashboardProps) {
               </button>
             </div>
 
+            {/* Settings Link */}
+            <a
+              href="/settings/credentials"
+              className="px-4 py-2 rounded-md text-sm font-medium transition-colors border border-border hover:bg-accent text-foreground"
+              title="Manage API Credentials"
+            >
+              ⚙️ Settings
+            </a>
+
             {/* Event Flow Debugger Toggle */}
             <button
               onClick={() => setDebuggerOpen(!debuggerOpen)}
@@ -300,10 +480,7 @@ export function Dashboard({ userId }: DashboardProps) {
             {/* Add Widget Button */}
             <button
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90"
-              onClick={() => {
-                // TODO: Open widget marketplace or chat
-                console.log('Add widget clicked');
-              }}
+              onClick={() => setSelectorOpen(true)}
             >
               + Add Widget
             </button>
@@ -368,6 +545,13 @@ export function Dashboard({ userId }: DashboardProps) {
       <EventFlowDebugger
         isOpen={debuggerOpen}
         onClose={() => setDebuggerOpen(false)}
+      />
+
+      {/* Widget Selector Modal */}
+      <WidgetSelector
+        isOpen={selectorOpen}
+        onClose={() => setSelectorOpen(false)}
+        onSelectWidget={handleSelectWidget}
       />
     </div>
   );

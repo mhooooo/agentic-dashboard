@@ -11,7 +11,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
 interface Provider {
-  name: 'github' | 'jira' | 'slack';
+  name: 'github' | 'jira' | 'linear' | 'slack' | 'calendar';
   displayName: string;
   description: string;
   icon: string;
@@ -74,6 +74,54 @@ const PROVIDERS: Provider[] = [
       },
     ],
   },
+  {
+    name: 'linear',
+    displayName: 'Linear',
+    description: 'Connect your Linear workspace to track issues and projects.',
+    icon: '📐',
+    fields: [
+      {
+        key: 'pat',
+        label: 'API Key',
+        type: 'password',
+        placeholder: 'lin_api_xxxxxxxxxxxxxxxxxxxxx',
+        required: true,
+        helpText: 'Create a key at: Settings → API → Personal API keys',
+      },
+    ],
+  },
+  {
+    name: 'slack',
+    displayName: 'Slack',
+    description: 'Connect your Slack workspace to view channels and messages.',
+    icon: '💬',
+    fields: [
+      {
+        key: 'pat',
+        label: 'Bot Token',
+        type: 'password',
+        placeholder: 'xoxb-xxxxxxxxxxxxxxxxxxxxx',
+        required: true,
+        helpText: 'Create a bot token at: api.slack.com/apps → OAuth & Permissions',
+      },
+    ],
+  },
+  {
+    name: 'calendar',
+    displayName: 'Google Calendar',
+    description: 'Connect your Google Calendar to view upcoming events.',
+    icon: '📅',
+    fields: [
+      {
+        key: 'pat',
+        label: 'OAuth Token',
+        type: 'password',
+        placeholder: 'ya29.xxxxxxxxxxxxxxxxxxxxx',
+        required: true,
+        helpText: 'Generate an OAuth token via Google Cloud Console',
+      },
+    ],
+  },
 ];
 
 export default function CredentialsPage() {
@@ -83,6 +131,24 @@ export default function CredentialsPage() {
   // Fetch connected providers on mount
   useEffect(() => {
     fetchConnectedProviders();
+
+    // Handle OAuth callback success/error messages
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    const provider = params.get('provider');
+    const error = params.get('error');
+    const errorDescription = params.get('error_description');
+
+    if (success && provider) {
+      toast.success(`✅ Successfully connected ${provider}!`);
+      // Clear URL parameters
+      window.history.replaceState({}, '', '/settings/credentials');
+    } else if (error) {
+      const message = errorDescription || `Failed to connect: ${error}`;
+      toast.error(message);
+      // Clear URL parameters
+      window.history.replaceState({}, '', '/settings/credentials');
+    }
   }, []);
 
   const fetchConnectedProviders = async () => {
@@ -144,9 +210,15 @@ function ProviderCard({
   onUpdate: () => void;
 }) {
   const [showForm, setShowForm] = useState(false);
+  const [showManualEntry, setShowManualEntry] = useState(false);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
+
+  const handleOAuthConnect = () => {
+    // Redirect to OAuth initiation endpoint
+    window.location.href = `/api/auth/${provider.name}`;
+  };
 
   const handleTest = async () => {
     setTesting(true);
@@ -251,12 +323,23 @@ function ProviderCard({
             </button>
           </div>
         ) : (
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="text-sm px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90"
-          >
-            Connect
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={handleOAuthConnect}
+              className="text-sm px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90"
+            >
+              Connect with OAuth
+            </button>
+            <button
+              onClick={() => {
+                setShowForm(true);
+                setShowManualEntry(true);
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Or enter token manually
+            </button>
+          </div>
         )}
       </div>
 

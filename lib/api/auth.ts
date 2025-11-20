@@ -50,7 +50,7 @@ export async function getAuthenticatedUser(): Promise<AuthContext | null> {
       if (process.env.NODE_ENV === 'development') {
         console.log('[Auth] DEV MODE: No auth session, using test user');
         return {
-          userId: 'dev-user-00000000-0000-0000-0000-000000000000',
+          userId: '00000000-0000-0000-0000-000000000000',
           email: 'dev@localhost',
         };
       }
@@ -71,7 +71,7 @@ export async function getAuthenticatedUser(): Promise<AuthContext | null> {
     if (process.env.NODE_ENV === 'development') {
       console.log('[Auth] DEV MODE: Auth error, using test user');
       return {
-        userId: 'dev-user-00000000-0000-0000-0000-000000000000',
+        userId: '00000000-0000-0000-0000-000000000000',
         email: 'dev@localhost',
       };
     }
@@ -102,20 +102,9 @@ export async function getUserCredentials(
       }
     }
 
-    const supabase = createServerSupabaseClient();
-
-    const { data, error } = await supabase
-      .from('user_credentials')
-      .select('credentials')
-      .eq('user_id', userId)
-      .eq('provider', provider)
-      .single();
-
-    if (error || !data) {
-      return null;
-    }
-
-    return data.credentials as ProviderCredentials;
+    // Use direct REST API to bypass Supabase JS client fetch issues
+    const { getCredentialsRest } = await import('./supabase-rest');
+    return await getCredentialsRest(userId, provider);
   } catch (error) {
     console.error(`[Auth] Error getting credentials for ${provider}:`, error);
     return null;
@@ -136,21 +125,15 @@ export async function saveUserCredentials(
   credentials: ProviderCredentials
 ): Promise<boolean> {
   try {
-    const supabase = createServerSupabaseClient();
+    // Use direct REST API to bypass Supabase JS client fetch issues
+    const { saveCredentialsRest } = await import('./supabase-rest');
+    const success = await saveCredentialsRest(userId, provider, credentials);
 
-    const { error } = await supabase.from('user_credentials').upsert({
-      user_id: userId,
-      provider,
-      credentials,
-      updated_at: new Date().toISOString(),
-    });
-
-    if (error) {
-      console.error(`[Auth] Error saving credentials for ${provider}:`, error);
-      return false;
+    if (success) {
+      console.log(`[Auth] Saved ${provider} credentials for user ${userId} (database)`);
     }
 
-    return true;
+    return success;
   } catch (error) {
     console.error(`[Auth] Error saving credentials for ${provider}:`, error);
     return false;
@@ -169,20 +152,15 @@ export async function deleteUserCredentials(
   provider: ProviderName
 ): Promise<boolean> {
   try {
-    const supabase = createServerSupabaseClient();
+    // Use direct REST API to bypass Supabase JS client fetch issues
+    const { deleteCredentialsRest } = await import('./supabase-rest');
+    const success = await deleteCredentialsRest(userId, provider);
 
-    const { error } = await supabase
-      .from('user_credentials')
-      .delete()
-      .eq('user_id', userId)
-      .eq('provider', provider);
-
-    if (error) {
-      console.error(`[Auth] Error deleting credentials for ${provider}:`, error);
-      return false;
+    if (success) {
+      console.log(`[Auth] Deleted ${provider} credentials for user ${userId} (database)`);
     }
 
-    return true;
+    return success;
   } catch (error) {
     console.error(`[Auth] Error deleting credentials for ${provider}:`, error);
     return false;

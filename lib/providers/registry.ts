@@ -8,6 +8,9 @@
 import type { ProviderAdapter, ProviderName } from './types';
 import { githubAdapter } from './github';
 import { jiraAdapter } from './jira';
+import { linearAdapter } from './linear';
+import { slackAdapter } from './slack';
+import { calendarAdapter } from './calendar';
 
 /**
  * Provider adapter registry
@@ -15,7 +18,9 @@ import { jiraAdapter } from './jira';
 const providers = new Map<ProviderName, ProviderAdapter>([
   ['github', githubAdapter],
   ['jira', jiraAdapter],
-  // 'slack' adapter will be added in Phase 5
+  ['linear', linearAdapter],
+  ['slack', slackAdapter],
+  ['calendar', calendarAdapter],
 ]);
 
 /**

@@ -1,0 +1,110 @@
+{
+  "metadata": {
+    "name": "GitHub Pull Requests",
+    "description": "View and track pull requests from your repositories",
+    "category": "development",
+    "version": 1
+  },
+  "dataSource": {
+    "provider": "github",
+    "endpoint": "/user/repos",
+    "method": "GET",
+    "params": {
+      "sort": "updated",
+      "per_page": 10,
+      "affiliation": "owner,collaborator"
+    },
+    "pollInterval": 60,
+    "dataPath": "$"
+  },
+  "fields": [
+    {
+      "name": "number",
+      "path": "$.number",
+      "type": "number",
+      "label": "PR Number"
+    },
+    {
+      "name": "title",
+      "path": "$.title",
+      "type": "string",
+      "label": "Title"
+    },
+    {
+      "name": "author",
+      "path": "$.user.login",
+      "type": "string",
+      "label": "Author"
+    },
+    {
+      "name": "state",
+      "path": "$.state",
+      "type": "enum",
+      "label": "State",
+      "enumLabels": {
+        "open": "Open",
+        "closed": "Closed",
+        "merged": "Merged"
+      }
+    },
+    {
+      "name": "created_at",
+      "path": "$.created_at",
+      "type": "date",
+      "label": "Created"
+    },
+    {
+      "name": "repository",
+      "path": "$.full_name",
+      "type": "string",
+      "label": "Repository"
+    },
+    {
+      "name": "comments",
+      "path": "$.comments",
+      "type": "number",
+      "label": "Comments"
+    },
+    {
+      "name": "jiraTicket",
+      "path": "$.title",
+      "type": "string",
+      "label": "Jira Ticket",
+      "format": "{{value}}"
+    }
+  ],
+  "layout": {
+    "type": "list",
+    "fields": {
+      "title": "title",
+      "subtitle": "repository",
+      "metadata": ["author", "created_at"],
+      "badge": {
+        "field": "state",
+        "colorMap": {
+          "Open": "bg-green-100 text-green-800",
+          "Closed": "bg-gray-100 text-gray-800",
+          "Merged": "bg-purple-100 text-purple-800"
+        }
+      }
+    },
+    "searchable": true,
+    "searchField": "title"
+  },
+  "interactions": {
+    "onSelect": {
+      "eventName": "github.pr.selected",
+      "payload": {
+        "number": "{{number}}",
+        "title": "{{title}}",
+        "repository": "{{repository}}",
+        "author": "{{author}}",
+        "state": "{{state}}",
+        "jiraTicket": "{{jiraTicket}}"
+      },
+      "source": "github-widget-universal"
+    }
+  },
+  "emptyMessage": "No pull requests found",
+  "errorMessage": "Please connect your GitHub account in Settings"
+}

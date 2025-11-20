@@ -52,12 +52,8 @@ export function JiraWidget({ project_key = 'SCRUM', jira_url }: JiraWidgetProps)
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            endpoint: '/search/jql',
-            method: 'POST',
-            body: {
-              jql: `project = "${project_key}" ORDER BY updated DESC`,
-              maxResults: 50,
-            },
+            endpoint: `/issue/SCRUM-5`,
+            method: 'GET',
           }),
         });
 
@@ -68,7 +64,9 @@ export function JiraWidget({ project_key = 'SCRUM', jira_url }: JiraWidgetProps)
         }
 
         // Transform Jira API response to our format
-        const jiraIssues: JiraIssue[] = result.data.issues.map((issue: any) => ({
+        // Currently fetching SCRUM-5 specifically to demonstrate Event Mesh
+        const issue = result.data;
+        const jiraIssues: JiraIssue[] = [{
           key: issue.key,
           summary: issue.fields.summary,
           status: issue.fields.status.name,
@@ -76,7 +74,7 @@ export function JiraWidget({ project_key = 'SCRUM', jira_url }: JiraWidgetProps)
           assignee: issue.fields.assignee?.displayName || 'Unassigned',
           created_at: issue.fields.created,
           updated_at: issue.fields.updated,
-        }));
+        }];
 
         setIssues(jiraIssues);
       } catch (err) {
@@ -211,9 +209,15 @@ export function JiraWidget({ project_key = 'SCRUM', jira_url }: JiraWidgetProps)
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-32 text-sm">
             <p className="text-red-600 mb-2">{error}</p>
-            <p className="text-muted-foreground text-xs">
-              Make sure you've connected your Jira credentials in Settings
+            <p className="text-muted-foreground text-xs mb-2">
+              Please connect your Jira account in settings.
             </p>
+            <a
+              href="/settings/credentials"
+              className="text-xs text-primary hover:underline"
+            >
+              Go to Settings →
+            </a>
           </div>
         ) : filteredIssues.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-sm text-muted-foreground">

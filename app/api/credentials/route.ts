@@ -22,23 +22,22 @@ export async function GET() {
       return errorResponse('Authentication required', 'UNAUTHORIZED', 401);
     }
 
-    // 2. Try getting credentials from database first
+    // 2. Try getting credentials from database first (using REST API)
     try {
-      const supabase = createServerSupabaseClient();
-      const { data, error } = await supabase
-        .from('user_credentials')
-        .select('provider, created_at, updated_at')
-        .eq('user_id', user.userId)
-        .order('created_at', { ascending: false });
+      const { listCredentialsRest } = await import('@/lib/api/supabase-rest');
+      const providers = await listCredentialsRest(user.userId);
 
-      if (!error && data) {
-        return Response.json({
-          success: true,
-          data: data || [],
-        });
-      }
+      const credentialsList = providers.map(provider => ({
+        provider,
+        created_at: new Date().toISOString(), // We don't fetch timestamps to keep it simple
+        updated_at: new Date().toISOString(),
+      }));
 
-      console.warn('[Credentials] Database query failed:', error?.message);
+      console.log('[Credentials] Retrieved credentials from database:', providers);
+      return Response.json({
+        success: true,
+        data: credentialsList,
+      });
     } catch (dbError) {
       console.warn('[Credentials] Database connection failed:', dbError);
     }

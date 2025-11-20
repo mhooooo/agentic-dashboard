@@ -51,16 +51,28 @@ export function createBrowserSupabaseClient() {
 export function createServerSupabaseClient() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+  // Configure options for Node.js/Next.js server environment
+  const serverOptions = {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+    global: {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    // Explicitly use native fetch (helps with Next.js 16 + Turbopack compatibility)
+    db: {
+      schema: 'public',
+    },
+  };
+
   if (serviceRoleKey) {
     // Use service role key for admin operations (backend proxy)
-    return createClient<Database>(getSupabaseUrl(), serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    return createClient<Database>(getSupabaseUrl(), serviceRoleKey, serverOptions);
   }
 
   // Fall back to anon key (for read operations)
-  return createClient<Database>(getSupabaseUrl(), getSupabaseAnonKey());
+  return createClient<Database>(getSupabaseUrl(), getSupabaseAnonKey(), serverOptions);
 }

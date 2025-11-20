@@ -1,0 +1,117 @@
+{
+  "metadata": {
+    "name": "Linear Issues",
+    "description": "View and track issues assigned to you",
+    "category": "project-management",
+    "version": 1
+  },
+  "dataSource": {
+    "provider": "linear",
+    "endpoint": "/graphql",
+    "method": "POST",
+    "body": {
+      "query": "query { issues(filter: { assignee: { isMe: { eq: true } } }, orderBy: updatedAt, first: 20) { nodes { id title identifier state { name } priority createdAt updatedAt assignee { name } team { name key } } } }"
+    },
+    "pollInterval": 60,
+    "dataPath": "$.issues.nodes"
+  },
+  "fields": [
+    {
+      "name": "id",
+      "path": "$.id",
+      "type": "string",
+      "label": "ID"
+    },
+    {
+      "name": "identifier",
+      "path": "$.identifier",
+      "type": "string",
+      "label": "Identifier"
+    },
+    {
+      "name": "title",
+      "path": "$.title",
+      "type": "string",
+      "label": "Title"
+    },
+    {
+      "name": "state",
+      "path": "$.state.name",
+      "type": "string",
+      "label": "State"
+    },
+    {
+      "name": "priority",
+      "path": "$.priority",
+      "type": "number",
+      "label": "Priority"
+    },
+    {
+      "name": "assignee",
+      "path": "$.assignee.name",
+      "type": "string",
+      "label": "Assignee"
+    },
+    {
+      "name": "team",
+      "path": "$.team.name",
+      "type": "string",
+      "label": "Team"
+    },
+    {
+      "name": "teamKey",
+      "path": "$.team.key",
+      "type": "string",
+      "label": "Team Key"
+    },
+    {
+      "name": "createdAt",
+      "path": "$.createdAt",
+      "type": "date",
+      "label": "Created"
+    },
+    {
+      "name": "updatedAt",
+      "path": "$.updatedAt",
+      "type": "date",
+      "label": "Updated"
+    }
+  ],
+  "layout": {
+    "type": "list",
+    "fields": {
+      "title": "title",
+      "subtitle": "team",
+      "metadata": ["identifier", "updatedAt"],
+      "badge": {
+        "field": "state",
+        "colorMap": {
+          "Backlog": "bg-gray-100 text-gray-800",
+          "Todo": "bg-blue-100 text-blue-800",
+          "In Progress": "bg-yellow-100 text-yellow-800",
+          "Done": "bg-green-100 text-green-800",
+          "Canceled": "bg-red-100 text-red-800"
+        }
+      }
+    },
+    "searchable": true,
+    "searchField": "title"
+  },
+  "interactions": {
+    "onSelect": {
+      "eventName": "linear.issue.selected",
+      "payload": {
+        "id": "{{id}}",
+        "identifier": "{{identifier}}",
+        "title": "{{title}}",
+        "state": "{{state}}",
+        "priority": "{{priority}}",
+        "team": "{{team}}",
+        "teamKey": "{{teamKey}}"
+      },
+      "source": "linear-widget-universal"
+    }
+  },
+  "emptyMessage": "No issues assigned to you",
+  "errorMessage": "Please connect your Linear account in Settings"
+}

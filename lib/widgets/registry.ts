@@ -49,6 +49,35 @@ export const WIDGET_REGISTRY: Record<string, WidgetMetadata> = {
       jira_url: '',
     },
   },
+  // Universal widgets (JSON-based)
+  'github-prs': {
+    type: 'github-prs',
+    version: 1,
+    name: 'GitHub Pull Requests',
+    description: 'View and track pull requests from your repositories (Universal)',
+    defaultConfig: {},
+  },
+  'linear-issues': {
+    type: 'linear-issues',
+    version: 1,
+    name: 'Linear Issues',
+    description: 'View and track issues assigned to you (Universal)',
+    defaultConfig: {},
+  },
+  'slack-messages': {
+    type: 'slack-messages',
+    version: 1,
+    name: 'Slack Channels',
+    description: 'View recent messages from your Slack channels (Universal)',
+    defaultConfig: {},
+  },
+  'calendar-events': {
+    type: 'calendar-events',
+    version: 1,
+    name: 'Calendar Events',
+    description: 'View your upcoming calendar events (Universal)',
+    defaultConfig: {},
+  },
 };
 
 /**

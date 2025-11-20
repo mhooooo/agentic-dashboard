@@ -230,9 +230,15 @@ export function GitHubWidget({ owner, repo, repositories, filters }: GitHubWidge
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-32 text-sm">
             <p className="text-red-600 mb-2">{error}</p>
-            <p className="text-muted-foreground text-xs">
-              Make sure you've connected your GitHub credentials in Settings
+            <p className="text-muted-foreground text-xs mb-2">
+              Please connect your GitHub account in settings.
             </p>
+            <a
+              href="/settings/credentials"
+              className="text-xs text-primary hover:underline"
+            >
+              Go to Settings →
+            </a>
           </div>
         ) : pullRequests.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
