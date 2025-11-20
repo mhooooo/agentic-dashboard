@@ -1,0 +1,129 @@
+{
+  "metadata": {
+    "name": "Calendar Events",
+    "description": "View your upcoming calendar events",
+    "category": "productivity",
+    "version": 1
+  },
+  "dataSource": {
+    "provider": "calendar",
+    "endpoint": "/calendars/primary/events",
+    "method": "GET",
+    "params": {
+      "timeMin": "{{now}}",
+      "maxResults": 20,
+      "singleEvents": true,
+      "orderBy": "startTime"
+    },
+    "pollInterval": 300,
+    "dataPath": "$.items"
+  },
+  "fields": [
+    {
+      "name": "id",
+      "path": "$.id",
+      "type": "string",
+      "label": "Event ID"
+    },
+    {
+      "name": "summary",
+      "path": "$.summary",
+      "type": "string",
+      "label": "Title"
+    },
+    {
+      "name": "description",
+      "path": "$.description",
+      "type": "string",
+      "label": "Description"
+    },
+    {
+      "name": "location",
+      "path": "$.location",
+      "type": "string",
+      "label": "Location"
+    },
+    {
+      "name": "startTime",
+      "path": "$.start.dateTime",
+      "type": "date",
+      "label": "Start Time"
+    },
+    {
+      "name": "endTime",
+      "path": "$.end.dateTime",
+      "type": "date",
+      "label": "End Time"
+    },
+    {
+      "name": "organizer",
+      "path": "$.organizer.email",
+      "type": "string",
+      "label": "Organizer"
+    },
+    {
+      "name": "attendeeCount",
+      "path": "$.attendees.length",
+      "type": "number",
+      "label": "Attendees"
+    },
+    {
+      "name": "status",
+      "path": "$.status",
+      "type": "enum",
+      "label": "Status",
+      "enumLabels": {
+        "confirmed": "Confirmed",
+        "tentative": "Tentative",
+        "cancelled": "Cancelled"
+      }
+    },
+    {
+      "name": "meetingLink",
+      "path": "$.hangoutLink",
+      "type": "string",
+      "label": "Meeting Link"
+    },
+    {
+      "name": "created",
+      "path": "$.created",
+      "type": "date",
+      "label": "Created"
+    }
+  ],
+  "layout": {
+    "type": "list",
+    "fields": {
+      "title": "summary",
+      "subtitle": "location",
+      "metadata": ["startTime", "attendeeCount"],
+      "badge": {
+        "field": "status",
+        "colorMap": {
+          "Confirmed": "bg-green-100 text-green-800",
+          "Tentative": "bg-yellow-100 text-yellow-800",
+          "Cancelled": "bg-red-100 text-red-800"
+        }
+      }
+    },
+    "searchable": true,
+    "searchField": "summary"
+  },
+  "interactions": {
+    "onSelect": {
+      "eventName": "calendar.event.selected",
+      "payload": {
+        "id": "{{id}}",
+        "summary": "{{summary}}",
+        "startTime": "{{startTime}}",
+        "endTime": "{{endTime}}",
+        "location": "{{location}}",
+        "organizer": "{{organizer}}",
+        "meetingLink": "{{meetingLink}}"
+      },
+      "source": "calendar-widget-universal"
+    }
+  },
+  "emptyMessage": "No upcoming events",
+  "errorMessage": "Please connect your Google Calendar account in Settings"
+}

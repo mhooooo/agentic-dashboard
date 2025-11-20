@@ -10,10 +10,12 @@
  * This is one half of the "magic" - the interconnection demo.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useEventMesh } from '@/lib/event-mesh/mesh';
 
 export interface GitHubWidgetProps {
+  owner?: string;
+  repo?: string;
   repositories?: string[];
   filters?: string[];
 }
@@ -32,58 +34,132 @@ interface PullRequest {
   repository: string;
 }
 
-/**
- * Mock data - will be replaced with real API calls via backend proxy
- */
-const MOCK_PRS: PullRequest[] = [
-  {
-    number: 234,
-    title: 'PROJ-123: Fix login bug',
-    author: 'alice',
-    state: 'open',
-    created_at: '2025-11-10T14:30:00Z',
-    comments_count: 3,
-    approvals_count: 1,
-    repository: 'acme/frontend',
-  },
-  {
-    number: 231,
-    title: 'PROJ-456: Add dark mode support',
-    author: 'bob',
-    state: 'open',
-    created_at: '2025-11-09T10:15:00Z',
-    comments_count: 0,
-    approvals_count: 0,
-    repository: 'acme/frontend',
-  },
-  {
-    number: 228,
-    title: 'Update dependencies',
-    author: 'charlie',
-    state: 'merged',
-    created_at: '2025-11-08T16:45:00Z',
-    comments_count: 2,
-    approvals_count: 2,
-    repository: 'acme/frontend',
-  },
-  {
-    number: 142,
-    title: 'PROJ-789: Optimize database queries',
-    author: 'alice',
-    state: 'open',
-    created_at: '2025-11-07T09:20:00Z',
-    comments_count: 5,
-    approvals_count: 1,
-    repository: 'acme/backend',
-  },
-];
-
-export function GitHubWidget({ repositories, filters }: GitHubWidgetProps) {
+export function GitHubWidget({ owner, repo, repositories, filters }: GitHubWidgetProps) {
   const [selectedPR, setSelectedPR] = useState<number | null>(null);
+  const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const publish = useEventMesh((state) => state.publish);
 
-  // TODO: Fetch real PRs from backend proxy
-  const pullRequests = MOCK_PRS;
+  /**
+   * Fetch real PRs from GitHub via backend proxy
+   * First, fetch user's repositories to find repos with open PRs
+   */
+  useEffect(() => {
+    const fetchPRs = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        // If owner and repo are specified, fetch from that repo
+        if (owner && repo) {
+          const response = await fetch('/api/proxy/github', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              endpoint: `/repos/${owner}/${repo}/pulls`,
+              method: 'GET',
+              params: {
+                state: 'all',
+                sort: 'updated',
+                direction: 'desc',
+                per_page: 20,
+              },
+            }),
+          });
+
+          const result = await response.json();
+
+          if (!result.success) {
+            throw new Error(result.error?.message || 'Failed to fetch pull requests');
+          }
+
+          const prs: PullRequest[] = result.data.map((pr: any) => ({
+            number: pr.number,
+            title: pr.title,
+            author: pr.user.login,
+            state: pr.merged_at ? 'merged' : pr.state,
+            created_at: pr.created_at,
+            comments_count: pr.comments,
+            approvals_count: pr.requested_reviewers?.length || 0,
+            repository: `${owner}/${repo}`,
+          }));
+
+          setPullRequests(prs);
+        } else {
+          // Otherwise, fetch user's repositories and aggregate their PRs
+          const reposResponse = await fetch('/api/proxy/github', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              endpoint: '/user/repos',
+              method: 'GET',
+              params: {
+                sort: 'updated',
+                per_page: 10,
+                affiliation: 'owner,collaborator',
+              },
+            }),
+          });
+
+          const reposResult = await reposResponse.json();
+
+          if (!reposResult.success) {
+            throw new Error(reposResult.error?.message || 'Failed to fetch repositories');
+          }
+
+          // Fetch PRs from first 3 repos that have open PRs
+          const allPRs: PullRequest[] = [];
+          for (const repoData of reposResult.data.slice(0, 3)) {
+            try {
+              const prResponse = await fetch('/api/proxy/github', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  endpoint: `/repos/${repoData.full_name}/pulls`,
+                  method: 'GET',
+                  params: {
+                    state: 'open',
+                    per_page: 10,
+                  },
+                }),
+              });
+
+              const prResult = await prResponse.json();
+              if (prResult.success && prResult.data.length > 0) {
+                const prs: PullRequest[] = prResult.data.map((pr: any) => ({
+                  number: pr.number,
+                  title: pr.title,
+                  author: pr.user.login,
+                  state: pr.merged_at ? 'merged' : pr.state,
+                  created_at: pr.created_at,
+                  comments_count: pr.comments,
+                  approvals_count: pr.requested_reviewers?.length || 0,
+                  repository: repoData.full_name,
+                }));
+                allPRs.push(...prs);
+              }
+            } catch (err) {
+              console.warn(`Failed to fetch PRs for ${repoData.full_name}:`, err);
+            }
+          }
+
+          setPullRequests(allPRs);
+        }
+      } catch (err) {
+        console.error('[GitHubWidget] Error fetching PRs:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load pull requests');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPRs();
+
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(fetchPRs, 60000);
+    return () => clearInterval(interval);
+  }, [owner, repo]);
 
   /**
    * Handle PR click - This is where the magic happens!
@@ -135,15 +211,36 @@ export function GitHubWidget({ repositories, filters }: GitHubWidgetProps) {
     <div className="flex flex-col h-full">
       {/* Widget Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Pull Requests</h3>
-        <span className="text-sm text-muted-foreground">
-          {pullRequests.filter(pr => pr.state === 'open').length} open
-        </span>
+        <h3 className="text-lg font-semibold">
+          {owner && repo ? `${owner}/${repo}` : 'Your Pull Requests'}
+        </h3>
+        {!loading && !error && (
+          <span className="text-sm text-muted-foreground">
+            {pullRequests.filter(pr => pr.state === 'open').length} open
+          </span>
+        )}
       </div>
 
       {/* PR List */}
       <div className="flex-1 overflow-auto space-y-2">
-        {pullRequests.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
+            Loading pull requests...
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-32 text-sm">
+            <p className="text-red-600 mb-2">{error}</p>
+            <p className="text-muted-foreground text-xs mb-2">
+              Please connect your GitHub account in settings.
+            </p>
+            <a
+              href="/settings/credentials"
+              className="text-xs text-primary hover:underline"
+            >
+              Go to Settings →
+            </a>
+          </div>
+        ) : pullRequests.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
             No pull requests found
           </div>

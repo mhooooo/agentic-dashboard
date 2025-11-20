@@ -1,0 +1,109 @@
+{
+  "metadata": {
+    "name": "Slack Messages",
+    "description": "View recent messages from your Slack channels",
+    "category": "communication",
+    "version": 1
+  },
+  "dataSource": {
+    "provider": "slack",
+    "endpoint": "/conversations.list",
+    "method": "GET",
+    "params": {
+      "types": "public_channel,private_channel",
+      "limit": 20,
+      "exclude_archived": true
+    },
+    "pollInterval": 60,
+    "dataPath": "$.channels"
+  },
+  "fields": [
+    {
+      "name": "id",
+      "path": "$.id",
+      "type": "string",
+      "label": "Channel ID"
+    },
+    {
+      "name": "name",
+      "path": "$.name",
+      "type": "string",
+      "label": "Channel Name"
+    },
+    {
+      "name": "topic",
+      "path": "$.topic.value",
+      "type": "string",
+      "label": "Topic"
+    },
+    {
+      "name": "purpose",
+      "path": "$.purpose.value",
+      "type": "string",
+      "label": "Purpose"
+    },
+    {
+      "name": "memberCount",
+      "path": "$.num_members",
+      "type": "number",
+      "label": "Members"
+    },
+    {
+      "name": "isPrivate",
+      "path": "$.is_private",
+      "type": "boolean",
+      "label": "Private"
+    },
+    {
+      "name": "isArchived",
+      "path": "$.is_archived",
+      "type": "boolean",
+      "label": "Archived"
+    },
+    {
+      "name": "created",
+      "path": "$.created",
+      "type": "date",
+      "label": "Created"
+    },
+    {
+      "name": "channelType",
+      "path": "$.is_private",
+      "type": "string",
+      "label": "Type",
+      "format": "{{value == 'true' ? 'Private' : 'Public'}}"
+    }
+  ],
+  "layout": {
+    "type": "list",
+    "fields": {
+      "title": "name",
+      "subtitle": "topic",
+      "metadata": ["memberCount", "created"],
+      "badge": {
+        "field": "channelType",
+        "colorMap": {
+          "Public": "bg-blue-100 text-blue-800",
+          "Private": "bg-purple-100 text-purple-800"
+        }
+      }
+    },
+    "searchable": true,
+    "searchField": "name"
+  },
+  "interactions": {
+    "onSelect": {
+      "eventName": "slack.channel.selected",
+      "payload": {
+        "id": "{{id}}",
+        "name": "{{name}}",
+        "topic": "{{topic}}",
+        "memberCount": "{{memberCount}}",
+        "isPrivate": "{{isPrivate}}"
+      },
+      "source": "slack-widget-universal"
+    }
+  },
+  "emptyMessage": "No Slack channels found",
+  "errorMessage": "Please connect your Slack account in Settings"
+}
