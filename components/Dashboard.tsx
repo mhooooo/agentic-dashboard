@@ -11,6 +11,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import GridLayout, { Layout } from 'react-grid-layout';
 import { useEventMesh } from '@/lib/event-mesh/mesh';
 import { useCheckpointManager, useUndoRedoShortcuts } from '@/lib/checkpoint/manager';
+import { useWidgetRealtime } from '@/lib/supabase/use-realtime';
 import { toast as sonnerToast, Toaster } from 'sonner';
 import 'react-grid-layout/css/styles.css';
 import 'react-grid-layout/css/styles.css';
@@ -21,6 +22,7 @@ import { JiraWidget } from './widgets/JiraWidget';
 import { EventFlowDebugger } from './EventFlowDebugger';
 import { WidgetSelector, type WidgetOption } from './WidgetSelector';
 import { UniversalDataWidget } from './UniversalDataWidget';
+import { ConnectionStatus } from './ConnectionStatus';
 import { loadWidgetDefinition } from '@/lib/universal-widget/loader';
 
 // Widget versioning system
@@ -195,6 +197,74 @@ export function Dashboard({ userId }: DashboardProps) {
 
   // Set up keyboard shortcuts (Cmd+Z, Cmd+Shift+Z)
   useUndoRedoShortcuts(handleUndo, handleRedo);
+
+  // Set up real-time subscriptions
+  useWidgetRealtime({
+    userId,
+    onInsert: useCallback((widget: WidgetInstance) => {
+      console.log('[Dashboard] Real-time widget inserted:', widget);
+
+      // Check if widget already exists (prevent duplicates)
+      if (widgets.find(w => w.id === widget.id)) {
+        console.log('[Dashboard] Widget already exists, skipping insert');
+        return;
+      }
+
+      // Add widget to dashboard
+      const newLayoutItem: Layout = {
+        i: widget.id,
+        x: widget.layout?.x ?? 0,
+        y: widget.layout?.y ?? Infinity,
+        w: widget.layout?.w ?? 6,
+        h: widget.layout?.h ?? 4,
+      };
+
+      setWidgets(prev => [...prev, widget]);
+      setLayout(prev => [...prev, newLayoutItem]);
+
+      sonnerToast.info('Widget added in another session');
+    }, [widgets]),
+    onUpdate: useCallback((widget: WidgetInstance) => {
+      console.log('[Dashboard] Real-time widget updated:', widget);
+
+      // Update widget in dashboard
+      setWidgets(prev =>
+        prev.map(w => (w.id === widget.id ? widget : w))
+      );
+
+      // Update layout if position changed
+      if (widget.layout) {
+        setLayout(prev =>
+          prev.map(l =>
+            l.i === widget.id
+              ? {
+                  ...l,
+                  x: widget.layout?.x ?? l.x,
+                  y: widget.layout?.y ?? l.y,
+                  w: widget.layout?.w ?? l.w,
+                  h: widget.layout?.h ?? l.h,
+                }
+              : l
+          )
+        );
+      }
+
+      sonnerToast.info('Widget updated in another session');
+    }, []),
+    onDelete: useCallback((widgetId: string) => {
+      console.log('[Dashboard] Real-time widget deleted:', widgetId);
+
+      // Remove widget from dashboard
+      setWidgets(prev => prev.filter(w => w.id !== widgetId));
+      setLayout(prev => prev.filter(l => l.i !== widgetId));
+
+      sonnerToast.info('Widget removed in another session');
+    }, []),
+    onError: useCallback((error: Error) => {
+      console.error('[Dashboard] Real-time error:', error);
+      sonnerToast.error('Real-time connection error');
+    }, []),
+  });
 
   // Create initial checkpoint on mount
   useEffect(() => {
@@ -414,6 +484,9 @@ export function Dashboard({ userId }: DashboardProps) {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Connection Status Indicator */}
+            <ConnectionStatus />
+
             {/* Undo/Redo Buttons */}
             <div className="flex items-center gap-1 border rounded-md">
               <button

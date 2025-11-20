@@ -41,7 +41,7 @@ export default function OAuthTestPage() {
       const credResponse = await fetch('/api/credentials');
       const credResult = await credResponse.json();
       if (credResult.success) {
-        const connected = new Set(credResult.data.map((c: any) => c.provider));
+        const connected = new Set<string>(credResult.data.map((c: any) => c.provider as string));
         setConnectedProviders(connected);
       }
     } catch (error) {

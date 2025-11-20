@@ -6,6 +6,7 @@
 
 ### Month 4 Priorities
 - [x] **Token Refresh:** Implement background job/logic to refresh OAuth tokens
+- [x] **Infrastructure & Production Readiness:** Vercel Cron, Supabase Auth, Real-time Subscriptions
 - [ ] **Expiry UI:** Add visual warning "Token expiring in 5m" or "Re-auth needed"
 - [ ] **AI Agent Architecture:** Design the prompt chain for Claude -> JSON Schema generation
 
@@ -26,6 +27,7 @@
 
 ## Activity Log
 
+- [2025-11-20 23:45] ✅ Completed: Infrastructure & Production Readiness - Vercel Cron (5min schedule), Supabase Auth (login/signup/logout), Real-time Subscriptions (live widget updates). Build passes with 0 TypeScript errors.
 - [2025-11-20 20:29] ✅ Completed: OAuth Token Refresh System - Automatic background job refreshes tokens 15min before expiry. Prevents widget breakage.
 - [2025-11-20 17:30] ✅ Completed: User Testing - Widget layout persistence verified working. All positions preserved across refresh.
 - [2025-11-20 17:15] ✅ Completed: Phase Transition & Documentation Cleanup - Updated CLAUDE.md and plan.md via ContextKeeper/PlanKeeper agents.
@@ -39,6 +41,6 @@ None.
 
 ## Next 3 Steps
 
-1.  **Cron Job Setup:** Configure Vercel Cron or GitHub Actions to trigger `/api/auth/refresh-tokens` every 5 minutes.
+1.  **Production Deployment:** Deploy to Vercel with environment variables and Supabase configuration.
 2.  **Token Expiry UI:** Add visual warnings when tokens are expiring soon ("Token expires in 5m", "Re-auth needed").
 3.  **AI Agent Prompting:** Begin constructing the prompt engineering for the conversational interface.

@@ -97,7 +97,9 @@ export function useWebhookPolling(options: WebhookPollingOptions = {}) {
             // Cleanup old processed IDs (keep last 100)
             if (processedEventsRef.current.size > 100) {
               const firstId = processedEventsRef.current.values().next().value;
-              processedEventsRef.current.delete(firstId);
+              if (firstId) {
+                processedEventsRef.current.delete(firstId);
+              }
             }
           });
 

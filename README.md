@@ -16,6 +16,7 @@ This is our differentiator. Widgets aren't isolated—they talk to each other th
 
 - Node.js 18+ installed
 - npm or yarn
+- Supabase account (for production) or dev mode for local development
 
 ### Installation
 
@@ -26,11 +27,67 @@ cd agentic-dashboard
 # Install dependencies (already done)
 npm install
 
+# Copy environment variables template
+cp .env.example .env.local
+
+# Configure environment variables (see below)
+# For development, you can skip Supabase configuration - the app will use dev mode
+
 # Start the development server
 npm run dev
 ```
 
-Visit **http://localhost:3001** (or check terminal for the actual port)
+Visit **http://localhost:3000** (or check terminal for the actual port)
+
+### Environment Setup
+
+**Development Mode (No Supabase Required):**
+- The app works in dev mode without Supabase
+- Uses in-memory storage and bypasses authentication
+- Perfect for testing the Event Mesh and widget interconnections
+
+**Production Setup (Supabase Required):**
+
+1. **Create a Supabase Project:**
+   - Visit https://supabase.com/dashboard
+   - Create a new project
+   - Go to Settings → API to find your credentials
+
+2. **Configure Environment Variables in `.env.local`:**
+   ```env
+   # Supabase Configuration
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+
+   # Application URL (for OAuth callbacks)
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+   # Cron Secret (for token refresh)
+   CRON_SECRET=your-random-secret-here
+   ```
+
+3. **Run Database Migrations:**
+   ```bash
+   # Install Supabase CLI
+   npm install -g supabase
+
+   # Link to your project
+   supabase link --project-ref your-project-ref
+
+   # Run migrations
+   supabase db push
+   ```
+
+4. **Enable Realtime in Supabase:**
+   - Go to Database → Replication
+   - Enable replication for `widget_instances` table
+   - This enables real-time updates across browser tabs
+
+5. **Deploy to Vercel:**
+   - Connect your GitHub repo to Vercel
+   - Add environment variables in Vercel dashboard
+   - The cron job will automatically run every 5 minutes to refresh OAuth tokens
 
 ### Try the Magic Demo
 
@@ -73,7 +130,10 @@ The magic is happening through the **Event Mesh** - a Zustand-based pub/sub syst
 - **UI:** shadcn/ui + Radix UI + Tailwind CSS
 - **State & Event Mesh:** Zustand
 - **Layout:** react-grid-layout (drag-and-drop widgets)
-- **Database:** Supabase (PostgreSQL + Vault for encrypted secrets)
+- **Database:** Supabase (PostgreSQL + RLS + Vault for encrypted secrets)
+- **Authentication:** Supabase Auth (email/password)
+- **Real-time:** Supabase Realtime (live widget updates across sessions)
+- **Cron Jobs:** Vercel Cron (OAuth token refresh every 5 minutes)
 - **AI:** Claude API (for future conversational interface)
 - **TypeScript:** Full type safety
 
@@ -190,7 +250,20 @@ const renderWidget = (widget: WidgetInstance) => {
 
 ### Month 3: The "Factory" ✅ COMPLETE
 
-### Month 4: The "AI Agent" 🚧 CURRENT
+### Month 4: Infrastructure & Production Readiness 🚧 IN PROGRESS
+
+**Completed:**
+- ✅ Vercel Cron Job for OAuth token refresh
+- ✅ Real Supabase Authentication (email/password)
+- ✅ Real-time Supabase Subscriptions (live dashboard updates)
+- ✅ Connection status indicator
+- ✅ Middleware for route protection
+- ✅ Logout functionality
+
+**Next:**
+- 🔄 AI Agent for conversational widget generation
+- 🔄 Token expiry UI warnings
+- 🔄 Production deployment guide
 
 ## 🐛 Troubleshooting
 

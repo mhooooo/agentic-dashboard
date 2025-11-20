@@ -159,7 +159,7 @@ export default function CredentialsPage() {
       console.log('[CredentialsPage] Fetched credentials:', result);
 
       if (result.success) {
-        const connected = new Set(result.data.map((c: any) => c.provider));
+        const connected = new Set<string>(result.data.map((c: any) => c.provider as string));
         console.log('[CredentialsPage] Connected providers:', Array.from(connected));
         setConnectedProviders(connected);
       }

@@ -200,6 +200,12 @@ if (process.env.NODE_ENV === 'development') {
 
 **2025-11-20 (CRITICAL):** Next.js 15 dynamic route params are now Promises. Must `await params` before destructuring: `const { widgetId } = await params;`. **Lesson:** TypeScript won't catch this - it's a runtime error. Affects all dynamic routes (`[param]`).
 
+**2025-11-20:** Built complete production infrastructure (Vercel Cron, Supabase Auth, Real-time Subscriptions). **Lesson:** Maintain dev mode bypass even when adding production features. Key insights:
+- **Dev mode flexibility**: Middleware checks `NODE_ENV === 'development'` to skip auth, real-time hooks gracefully skip when Supabase not configured. This maintains fast local iteration.
+- **TypeScript strictness**: When adding real-time subscriptions, hit type errors with `apikey: string | undefined` in headers. **Fix:** Use conditional spread: `...(serviceKey ? { 'apikey': serviceKey } : {})` instead of `'apikey': serviceKey`.
+- **Middleware deprecation (Next.js 16)**: Got warning: "middleware" file convention deprecated, use "proxy" instead. Not blocking, but plan to migrate when Next.js 16 stabilizes.
+- **Build validation is critical**: Fixed 7 TypeScript errors before declaring "done". Zero-error builds prevent production surprises.
+
 ### Specific Bug Fixes
 
 **2025-11-20:** Widget layout persistence hit THREE critical bugs before working:
@@ -222,5 +228,5 @@ if (process.env.NODE_ENV === 'development') {
 
 ---
 
-**Last Updated:** November 20, 2025 (OAuth Token Refresh System Complete)
-**Next Decision Point:** Configure cron job for production deployment (Vercel Cron vs GitHub Actions vs manual). See `docs/OAUTH_TOKEN_REFRESH.md` for setup guide.
+**Last Updated:** November 20, 2025 (Infrastructure & Production Readiness Complete)
+**Next Decision Point:** Deploy to production (Vercel + Supabase). Cron job configured via `vercel.json`. Enable Supabase Realtime replication on `widget_instances` table.

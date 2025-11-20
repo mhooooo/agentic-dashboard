@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { LogoutButton } from "@/components/LogoutButton";
+import { getAuthenticatedUser } from "@/lib/api/auth";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,16 +20,31 @@ export const metadata: Metadata = {
   description: "AI-powered dashboard with real-time Event Mesh",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Get authenticated user (if any)
+  const authContext = await getAuthenticatedUser();
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {/* Show user info and logout button if authenticated */}
+        {authContext && (
+          <div className="border-b bg-muted/30">
+            <div className="flex items-center justify-end gap-4 px-4 py-2">
+              <span className="text-sm text-muted-foreground">
+                {authContext.email}
+              </span>
+              <LogoutButton />
+            </div>
+          </div>
+        )}
+
         {children}
         <Toaster position="top-right" richColors />
       </body>

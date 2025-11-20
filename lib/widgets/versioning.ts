@@ -18,6 +18,12 @@ export interface WidgetInstance {
   type: string;
   version: number;
   config: Record<string, any>;
+  layout?: {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  };
 }
 
 /**

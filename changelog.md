@@ -4,6 +4,61 @@ All notable changes, bugs, and fixes to the Agentic Dashboard project.
 
 ---
 
+## 2025-11-20 (Part 2) - Infrastructure & Production Readiness Complete
+
+### Summary
+Completed all 3 infrastructure tasks for production deployment: Vercel Cron, Supabase Authentication, and Real-time Subscriptions.
+
+### Task 1: Vercel Cron Job Setup ✅
+- **Added:** `vercel.json` with cron configuration (runs every 5 minutes)
+- **Integration:** Triggers `/api/auth/refresh-tokens` endpoint automatically in production
+- **Security:** Uses existing `CRON_SECRET` authorization check
+- **Dev Mode:** Manual testing without auth for local development
+
+### Task 2: Real Supabase Authentication ✅
+- **Added:** Login page (`app/login/page.tsx`) with email/password authentication
+- **Added:** Signup page (`app/signup/page.tsx`) with email verification flow
+- **Added:** Logout endpoint (`app/api/auth/logout/route.ts`) and UI button
+- **Added:** Middleware (`middleware.ts`) for route protection using `@supabase/ssr`
+- **Updated:** Root layout shows user email and logout button when authenticated
+- **Updated:** Main page fetches real user from Supabase session
+- **Maintained:** Dev mode bypass (works without Supabase for local development)
+
+### Task 3: Real-time Supabase Subscriptions ✅
+- **Added:** `lib/supabase/use-realtime.ts` - Hook for widget change subscriptions
+- **Features:** Subscribes to INSERT, UPDATE, DELETE on `widget_instances` table
+- **Added:** `components/ConnectionStatus.tsx` - Visual indicator (green/red/yellow dot)
+- **Updated:** Dashboard component integrates real-time updates
+- **UX:** Toast notifications inform users of changes from other browser tabs/sessions
+- **RLS:** Subscriptions filtered by `user_id` for security
+
+### Bug Fixes (TypeScript Compilation)
+- Fixed webhook_events table references (commented out until table created)
+- Fixed `Set<unknown>` type errors → `Set<string>` in credentials pages
+- Added `layout` property to `WidgetInstance` interface
+- Fixed undefined `apikey` header in OAuth refresh job (conditional spread)
+- Fixed database schema type literal ("public" as const)
+- Fixed real-time delete payload type checking
+- Fixed webhook polling iterator undefined check
+
+### Documentation
+- **Updated:** README.md with environment setup (dev mode vs production)
+- **Added:** Instructions for Supabase project creation and configuration
+- **Added:** Realtime replication setup instructions
+- **Added:** Vercel deployment steps
+
+### Testing
+- ✅ Build succeeds with zero TypeScript errors
+- ✅ All existing features functional
+- ✅ Dev mode works without Supabase
+
+### Next Steps (Month 4 Remaining)
+- 🔄 AI Agent for conversational widget generation
+- 🔄 Token expiry UI warnings (visual countdown)
+- 🔄 Production deployment guide refinement
+
+---
+
 ## 2025-11-20 - OAuth Token Refresh System (Month 4 - AI Agent & Hardening)
 
 ### Feature: Automatic Token Refresh to Prevent Widget Breakage

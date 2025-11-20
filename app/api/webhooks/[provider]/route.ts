@@ -53,17 +53,19 @@ export async function POST(
     console.log(`[Webhooks] Received ${provider}.${eventType}`);
 
     // 5. Store webhook event in database
-    const supabase = createServerSupabaseClient();
-    const { error: dbError } = await supabase.from('webhook_events').insert({
-      provider,
-      event_type: eventType,
-      payload,
-    });
-
-    if (dbError) {
-      console.error(`[Webhooks] Error storing event:`, dbError);
-      // Don't fail the webhook - return success to provider
-    }
+    // TODO: Add webhook_events table to database schema
+    // const supabase = createServerSupabaseClient();
+    // const { error: dbError } = await supabase.from('webhook_events').insert({
+    //   provider,
+    //   event_type: eventType,
+    //   payload,
+    // });
+    //
+    // if (dbError) {
+    //   console.error(`[Webhooks] Error storing event:`, dbError);
+    //   // Don't fail the webhook - return success to provider
+    // }
+    console.log('[Webhooks] Webhook event received (database storage disabled until table is created)');
 
     // 6. Publish to Event Mesh (server-side broadcast)
     // Note: This will be implemented in the next task

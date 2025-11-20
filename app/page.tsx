@@ -1,8 +1,15 @@
 import { Dashboard } from '@/components/Dashboard';
+import { getAuthenticatedUser } from '@/lib/api/auth';
+import { redirect } from 'next/navigation';
 
-export default function Home() {
-  // TODO: Replace with actual user ID from authentication
-  const userId = 'demo-user';
+export default async function Home() {
+  // Get authenticated user from session
+  const authContext = await getAuthenticatedUser();
 
-  return <Dashboard userId={userId} />;
+  if (!authContext) {
+    // Not authenticated - redirect to login (fallback, middleware should catch this)
+    redirect('/login');
+  }
+
+  return <Dashboard userId={authContext.userId} />;
 }

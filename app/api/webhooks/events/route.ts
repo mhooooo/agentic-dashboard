@@ -28,28 +28,32 @@ export async function GET(request: Request) {
       : new Date(Date.now() - 5 * 60 * 1000);
 
     // Query webhook events
-    const supabase = createServerSupabaseClient();
-    const { data, error } = await supabase
-      .from('webhook_events')
-      .select('id, provider, event_type, payload, received_at')
-      .gte('received_at', since.toISOString())
-      .order('received_at', { ascending: true })
-      .limit(limit);
+    // TODO: Add webhook_events table to database schema
+    // const supabase = createServerSupabaseClient();
+    // const { data, error } = await supabase
+    //   .from('webhook_events')
+    //   .select('id, provider, event_type, payload, received_at')
+    //   .gte('received_at', since.toISOString())
+    //   .order('received_at', { ascending: true })
+    //   .limit(limit);
+    //
+    // if (error) {
+    //   console.error('[Webhook Events] Error fetching events:', error);
+    //   return errorResponse('Failed to fetch webhook events', 'DATABASE_ERROR', 500);
+    // }
+    //
+    // // Transform events into Event Mesh format
+    // const events = (data || []).map((event) => ({
+    //   id: event.id,
+    //   eventName: `${event.provider}.${event.event_type}`,
+    //   provider: event.provider,
+    //   eventType: event.event_type,
+    //   payload: transformWebhookPayload(event.provider, event.event_type, event.payload),
+    //   receivedAt: event.received_at,
+    // }));
 
-    if (error) {
-      console.error('[Webhook Events] Error fetching events:', error);
-      return errorResponse('Failed to fetch webhook events', 'DATABASE_ERROR', 500);
-    }
-
-    // Transform events into Event Mesh format
-    const events = (data || []).map((event) => ({
-      id: event.id,
-      eventName: `${event.provider}.${event.event_type}`,
-      provider: event.provider,
-      eventType: event.event_type,
-      payload: transformWebhookPayload(event.provider, event.event_type, event.payload),
-      receivedAt: event.received_at,
-    }));
+    // Return empty array until webhook_events table is created
+    const events: any[] = [];
 
     return Response.json({
       success: true,

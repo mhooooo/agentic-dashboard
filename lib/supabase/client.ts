@@ -64,7 +64,7 @@ export function createServerSupabaseClient() {
     },
     // Explicitly use native fetch (helps with Next.js 16 + Turbopack compatibility)
     db: {
-      schema: 'public',
+      schema: 'public' as const,
     },
   };
 
