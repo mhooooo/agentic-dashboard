@@ -14,9 +14,11 @@ export type ProviderName = 'github' | 'jira' | 'linear' | 'slack' | 'calendar';
  * Stored credentials for a provider
  */
 export interface ProviderCredentials {
-  pat?: string; // Personal Access Token
+  pat?: string; // Personal Access Token (or OAuth access_token)
   email?: string; // User email (for Jira)
   url?: string; // Instance URL (for Jira)
+  refresh_token?: string; // OAuth refresh token (for automatic token refresh)
+  expires_at?: number; // Token expiration timestamp in milliseconds (for OAuth)
   [key: string]: any; // Additional provider-specific fields
 }
 

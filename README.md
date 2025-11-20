@@ -186,25 +186,11 @@ const renderWidget = (widget: WidgetInstance) => {
 
 ### Month 1: The "Magic" POC ✅ COMPLETE
 
-- [x] Event Mesh implementation (Zustand pub/sub)
-- [x] Dashboard layout with drag-and-drop (react-grid-layout)
-- [x] GitHub Widget (hardcoded, with mock data)
-- [x] Jira Widget (hardcoded, with mock data)
-- [x] **Demo: Click GitHub PR → Jira auto-filters** ✨
+### Month 2: The "Safety Net" ✅ COMPLETE
 
-### Month 2: The "Safety Net" (Next)
+### Month 3: The "Factory" ✅ COMPLETE
 
-- [ ] Simple Undo (Cmd+Z for dashboard state)
-- [ ] Safe Mode toggle (disable Event Mesh)
-- [ ] Event Flow Debugger (see event propagation)
-- [ ] Simple versioning system
-
-### Month 3: The "Factory"
-
-- [ ] UniversalDataWidget (declarative JSON → UI)
-- [ ] Conversational widget creation (Claude API)
-- [ ] Widget marketplace UI
-- [ ] "Preview & Confirm" flow for new widgets
+### Month 4: The "AI Agent" 🚧 CURRENT
 
 ## 🐛 Troubleshooting
 
