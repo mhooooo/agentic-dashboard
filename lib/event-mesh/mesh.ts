@@ -3,6 +3,10 @@
  *
  * This is the "magic" that allows widgets to communicate and react to each other.
  * Example: Click a GitHub PR → Jira widget auto-filters to that ticket
+ *
+ * V2 Enhancement: Event Mesh now supports DocumentableEvent persistence
+ * for self-documentation and knowledge graph capabilities.
+ * See docs/EVENT_MESH_V2.md for complete specification.
  */
 
 import { create } from 'zustand';
@@ -210,4 +214,41 @@ export function useEventSubscription(
 }
 
 // Export for use in React components
-import React from 'react';
+import * as React from 'react';
+
+/**
+ * Export Event Mesh V2 persistence functions
+ *
+ * These functions provide database persistence for DocumentableEvents:
+ * - publishDocumentable(): Persist events with user intent and context
+ * - queryEventHistory(): Query events with graph traversal
+ * - updateEventOutcome(): Update event outcomes asynchronously
+ * - getEvent(): Get a single event by ID
+ * - saveNarrativeContext(): Save rich narrative context
+ * - getNarrativeContext(): Get narrative context
+ *
+ * See docs/EVENT_MESH_V2.md for complete API reference.
+ */
+export {
+  publishDocumentable,
+  queryEventHistory,
+  updateEventOutcome,
+  getEvent,
+  saveNarrativeContext,
+  getNarrativeContext,
+} from './persistence';
+
+/**
+ * Export Event Mesh V2 types
+ */
+export type {
+  DocumentableEvent,
+  EventLogEntry,
+  UserIntent,
+  EventContext,
+  EventMetadata,
+  NarrativeContext,
+  QueryEventHistoryOptions,
+  BuildNarrativeOptions,
+  UpdateOutcomeOptions,
+} from './types';

@@ -1,27 +1,27 @@
 # Agentic Dashboard: Implementation Plan
 
-## 📍 Current Phase: Month 4 - AI Agent & Hardening
+## 📍 Current Phase: Month 5 - Universal Orchestration Layer
 
-**Goal:** Add conversational widget creation and production-grade token management to enable autonomous dashboard evolution.
+**Goal:** Transform from interconnected dashboard to universal workflow orchestration with self-documentation.
 
 ### Active Priorities
 
-1. **Production Deployment** - Deploy to Vercel with full Supabase configuration and environment variables
-2. **Token Expiry UI** - Visual warnings ("Token expires in 5m", "Re-auth needed") before widgets break
-3. **AI Agent Prompting** - Design Claude API integration for natural language widget generation
+1. **Week 18 Backend Integration** - Connect wizard UI to Claude API, implement streaming responses
+2. **Week 19 Visualization UI** - Build Stage 3 visualization selection, Stage 4 preview with live rendering
+3. **Week 20 Domain Expansion** - Add Stripe + Twilio providers, prove universal orchestration beyond dev tools
 
-### Immediate Task List
+### Immediate Task List (Week 18: Dec 8-14)
 
-- [x] Implement background token refresh job (cron or polling) ✅
-- [x] Add token expiry timestamp tracking to credentials table ✅
-- [x] Configure Vercel Cron to trigger `/api/auth/refresh-tokens` every 5 minutes ✅
-- [x] Implement Supabase Authentication (login/signup/logout/middleware) ✅
-- [x] Implement Real-time Supabase Subscriptions for live widget updates ✅
-- [ ] Deploy to production (Vercel + Supabase)
-- [ ] Build expiry warning UI component (show in widget header or settings page)
-- [x] User test: Widget persistence verification (manual, 5 min) ✅
-- [ ] Design AI agent prompt chain (natural language → JSON schema validation → preview → deploy)
-- [ ] Decide: Full NL ("I need X") OR guided wizard first?
+- [x] Claude API Client Setup ✅
+- [x] Event Persistence Layer (Event Mesh V2) ✅
+- [x] Problem-First Wizard System Prompt ✅
+- [x] Conversation State Management (Zustand store) ✅
+- [x] Wizard UI Foundation (chat interface) ✅
+- [ ] API Route: POST /api/ai/widget-creation/chat (streaming)
+- [ ] Wire wizard UI to Claude API client
+- [ ] Test end-to-end: problem → AI inference → widget creation
+- [ ] Validate 80%+ accuracy on widget inference
+- [ ] Deploy Week 17 foundation to production
 
 ---
 
@@ -73,12 +73,50 @@ useEventSubscription('github.pr.*', (data) => setFilter(data.jiraTicket));
 
 ## 📅 Roadmap
 
-### Month 4: AI Agent & Hardening (CURRENT)
-**Week 13-14:** Token refresh automation + expiry warnings
-**Week 15-16:** AI agent prompt engineering + JSON generation pipeline
-**Decision Point:** Full NL ("I need X") OR guided multi-step wizard first? (Lean: Wizard)
+### Month 5: Universal Orchestration Layer (CURRENT - Dec 1-28, 2025)
 
-### Month 5-6: Reliable Platform
+**RFC:** [RFC-001](docs/rfcs/RFC-001-MONTH-5-UNIVERSAL-ORCHESTRATION.md)
+
+**Vision:** Transform from interconnected dashboard to universal workflow orchestration with self-documentation
+
+**Goal:** Ship problem-first wizard + Glass Factory MVP (Twitter threads)
+
+**Week 17-19 (70% effort): Problem-First Widget Wizard**
+- Stage 1: "What problem are you solving?" (Trojan Horse question)
+- AI inference: Problem → widget suggestion
+- Intent extraction: problemSolved, painPoint, goal, impactMetric
+- 5-stage conversation: Problem → Clarifying → Visualization → Preview → Deploy
+
+**Week 17-19 (30% effort): Glass Factory Foundation**
+- DocumentableEvent schema with userIntent field
+- Event persistence (event_history table)
+- Knowledge graph builder (simple ID matching)
+- Journalist Agent (Twitter threads only)
+- "Build feature → 5 min later → shareable content"
+
+**Week 20: Domain Expansion**
+- Stripe provider (payments)
+- Twilio provider (SMS notifications)
+- Example automation: payment.received → SMS notification
+- Proves: Universal Orchestration works beyond dev tools
+
+**Deliverables:**
+1. Problem-first wizard (conversational, captures intent)
+2. Glass Factory MVP (Twitter threads with knowledge graph)
+3. Self-documentation magic (build → 5 min → shareable content)
+4. Domain flexibility proof (Stripe + Twilio)
+
+**Success Metrics:**
+- Widget creation: <5 min (vs 15 min manual)
+- Intent capture: 100% automatic (no separate form)
+- Glass Factory: User generates + shares Twitter thread
+- Domain flexibility: Stripe + Twilio working end-to-end
+
+**Timeline:** 4 weeks (Dec 1-28, 2025)
+**Complexity:** Medium (2 AI agents, database schema, 2 new providers)
+**Differentiator:** System explains itself while you build it
+
+### Month 6-7: Reliable Platform
 - [ ] Collaboration & sharing (B2B features)
 - [ ] Widget marketplace
 - [ ] Real-time Supabase subscriptions
@@ -110,14 +148,18 @@ useEventSubscription('github.pr.*', (data) => setFilter(data.jiraTicket));
 - **Achievement:** 10-15 min per widget (goal was <2 hours)
 - **Validation:** GraphQL support works seamlessly (Linear provider)
 
-**Month 4 (Part 1): Infrastructure & Production Readiness** ✅
+**Month 4: AI Agent & Hardening** ✅ (Production Launch Ready!)
+- Token Expiry Warning System (real-time countdown badges, warning cards, global banner)
+- AI Agent Architecture Design (complete design doc, 5-stage guided wizard approach)
+- Production Documentation (6,800+ lines: deployment guide, known issues, OAuth troubleshooting)
+- OAuth E2E Testing Plan (5 test suites, 40+ verification items)
+- Build fixes (resolved TypeScript errors, 0 errors in build)
 - Vercel Cron job setup (`vercel.json`) for automatic token refresh every 5 minutes
 - Supabase Authentication (email/password login, signup, logout, middleware)
 - Real-time Supabase Subscriptions (live widget updates across browser tabs/sessions)
 - Connection status indicator (online/offline/connecting)
-- Fixed 7 TypeScript compilation errors (build passes with 0 errors)
-- Updated documentation (README.md, changelog.md)
-- **Achievement:** Full production-ready backend infrastructure
+- **Achievement:** Production-ready infrastructure + comprehensive documentation + UX enhancements
+- **Decision:** Guided wizard approach for AI agent (Month 5 implementation)
 
 ---
 
@@ -173,12 +215,12 @@ export const newProviderAdapter: ProviderAdapter = {
 
 ## 🎯 Next 3 Steps
 
-1. **Production Deployment** - Deploy to Vercel with environment variables, configure Supabase project, enable real-time replication
-2. **Token Expiry UI** - Add visual warnings to credentials page + widget headers when tokens expiring soon
-3. **AI Agent Design** - Create prompt chain for Claude API (natural language → JSON schema → validation → preview)
+1. **Production Deployment** - Deploy to Vercel with environment variables, configure Supabase project, update OAuth callback URLs
+2. **Post-Deploy Verification** - Run OAuth smoke tests (Test Suite A), monitor Vercel cron logs, validate token refresh
+3. **Month 5 Kickoff** - Begin AI agent guided wizard implementation (Claude API client + conversation state)
 
 **Blocked on:** None
 
 ---
 
-**Last Updated:** November 20, 2025 (Infrastructure & Production Readiness Complete)
+**Last Updated:** November 24, 2025 (Month 5 Documentation Complete)

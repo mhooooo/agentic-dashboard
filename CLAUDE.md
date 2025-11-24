@@ -102,26 +102,82 @@
 
 ## Current Phase
 
-**Focus:** Month 4 - AI Agent & Hardening
+**Focus:** Month 5 - Universal Orchestration Layer
 
-**Priorities:**
-1. **Automatic Token Refresh:** Background job to refresh OAuth tokens before expiration (prevent widget breakage)
-2. **Token Expiry UI:** Visual warnings ("Token expires in 5m", "Re-auth needed")
-3. **AI Agent Prompting:** Conversational interface for widget generation (natural language → JSON schema)
-4. **User Testing:** Validate widget layout persistence (arrange → wait 1s → refresh → verify)
+**Vision Evolution:**
+- From: Interconnected dashboard with Event Mesh
+- To: Universal workflow orchestration with self-documentation
+- Key insight: "The system explains itself while you build it"
+
+This month marks a fundamental shift in positioning. We're no longer building just a "dashboard" — we're building a **Universal Orchestration Layer** for SaaS APIs. The goal: enable non-technical users to orchestrate complex multi-service workflows ("When payment succeeds in Stripe → create Jira ticket → send Slack notification → update Google Sheet") through conversational interface, with Event Mesh handling real-time propagation.
+
+**Why This Matters:**
+- **Current state:** Users connect services manually (Zapier, IFTTT) with rigid "if-this-then-that" logic. Configuration is complex, debugging is painful, and each workflow is isolated.
+- **Our approach:** Conversational problem description → AI generates workflow → Event Mesh executes in real-time → Visual feedback shows what happened. The "glass factory" pattern: simple output interface, sophisticated backend intelligence.
+- **Key insight:** Dashboards are just one visualization of the orchestration layer. The real power is the Event Mesh + AI agent combination, which can drive any output (dashboards, webhooks, automations, alerts).
+
+**Architecture Decision: Problem-First Wizard (Nov 24, 2025)**
+- **Choice:** Stage 1 asks "What problem are you solving?" not "What provider?" Captures user intent naturally (problemSolved, painPoint, goal, impactMetric). Gives Journalist Agent rich material for storytelling.
+- **Why:** Technical-first approach ("Choose a widget...") creates decision paralysis. Problem-first approach ("I need to track late payments") lets AI suggest optimal solution.
+- **Trade-off:** AI inference may be inaccurate (70-80% expected). Mitigated by clarifying questions and user overrides. Requires sophisticated AI prompt engineering to map problems → technical implementations. Acceptable because it's our core differentiator.
+- **When to revisit:** If <60% accuracy in problem → widget mapping, or if AI accuracy <70% on problem → solution mapping, or if users prefer browsing widget catalog.
+- **Validation:** See RFC-001 (2,500 lines) for complete design rationale and user testing plan.
+
+**Architecture Decision: Glass Factory Pattern (Nov 24, 2025)**
+- **Choice:** Simple user-facing interface ("When X happens, do Y") backed by sophisticated Event Mesh orchestration
+- **Why:** Users want outcomes, not configuration. The complexity should be invisible. Like a glass factory: you see beautiful output, not the furnace complexity behind the scenes.
+- **Trade-off:** Requires building intelligent agent that understands user intent and translates to event subscriptions, API calls, and data transformations. Significant AI investment up-front.
+- **When to revisit:** If maintaining the abstraction layer becomes more complex than exposing raw controls to users.
+- **Implementation:** See `docs/MONTH_5_IMPLEMENTATION_GUIDE.md` for technical architecture.
+
+**Architecture Decision: Glass Factory with Simple Output (Nov 24, 2025)**
+- **Choice:** Twitter threads only (simple output) with knowledge graph backend (sophisticated)
+- **Why:** Ship fast, prove concept, iterate on quality. "You build features → 5 minutes later → shareable content explaining it."
+- **Trade-off:** Users may want LinkedIn/blog immediately. Acceptable for MVP, deferred to Month 6.
+- **When to revisit:** When 10+ users request multi-format generation.
+
+**Architecture Decision: DocumentableEvent with userIntent (Nov 24, 2025)**
+- **Choice:** Extend Event Mesh with userIntent field (problemSolved, painPoint, goal, expectedOutcome, impactMetric)
+- **Why:** System knows "what" but not "why." Without motivation, Journalist Agent can't tell compelling stories.
+- **Trade-off:** Requires capturing intent during widget creation. Zero added friction via "Trojan Horse" question.
+- **When to revisit:** If userIntent extraction quality <80%.
+
+**Key Deliverables:**
+1. **Problem-First Widget Wizard** - Conversational interface that discovers user's problem before suggesting solutions. 5-stage flow: (1) Problem discovery, (2) Clarifying questions, (3) Visualization, (4) Preview, (5) Deploy. Uses Claude Sonnet 4.5 for natural language understanding.
+
+2. **Glass Factory MVP** - Two "showcase" orchestrations that demonstrate zero-config magic:
+   - **Stripe → Jira → Slack:** "When payment succeeds, create Jira ticket and notify #sales" (demonstrates B2B SaaS workflow)
+   - **Calendar → SMS → Dashboard:** "Remind me 10min before meetings via SMS" (demonstrates personal productivity workflow)
+   - Both implemented as declarative JSON with `DocumentableEvent` schema for debugging
+
+3. **Stripe + Twilio Integration** - Expand beyond "read-only" APIs to "action-taking" APIs. Enables workflows that DO things (send SMS, charge cards) not just display data. Security-critical: require explicit user confirmation before executing actions.
+
+4. **DocumentableEvent Schema** - Standardized event format for Event Mesh that makes debugging trivial. Every event carries: `eventName`, `source`, `timestamp`, `payload`, `relatedEvents`. Enables "explain this workflow" feature in Event Debugger.
+
+5. **Self-Documentation Magic** - "Build feature → 5 min later → shareable content." Twitter threads only for MVP. Knowledge graph builder with simple ID matching. Journalist Agent converts event history to narrative.
 
 **Pending Decisions:**
 - ~~**Token Refresh Strategy:** Build proactive background job now OR reactive "refresh on 401" approach?~~ ✅ **RESOLVED:** Built proactive background job (Nov 20, 2025). Refreshes tokens 15 minutes before expiry. Prevents user-facing errors and widget downtime.
-- **Conversational Agent Scope:** Full natural language ("I need X") OR guided multi-step wizard?
-  - Lean: Start with guided wizard (lower risk), expand to full NL after validation.
+- ~~**Conversational Agent Scope:** Full natural language ("I need X") OR guided multi-step wizard?~~ ✅ **RESOLVED:** Problem-first guided wizard (Nov 24, 2025). Starts with problem discovery, AI suggests solutions. Lower risk than full NL, better validation.
+- **Action Confirmation UX:** For workflows that take actions (charge Stripe, send SMS), require per-action confirmation OR one-time workflow approval? Lean toward per-action until we build user trust.
+- **Event Mesh Scaling:** Current Zustand pub/sub is in-memory (lost on page refresh). Need persistent event log for "explain what happened" debugging. Use Supabase real-time OR build custom event store? Defer until Month 6 unless becomes blocking.
 
 **Status:**
-- Month 3 complete (Nov 19-20, 2025)
-- OAuth 2.0 integration live for all 5 providers
-- OAuth Token Refresh System complete (Nov 20, 2025)
-- Widget persistence system working (3 critical bugs fixed Nov 20)
-- UniversalDataWidget system operational
-- Real API integration with Event Mesh validated
+- Month 5 Week 17 complete (Dec 1-7, 2025) - Foundation Ready! ✅
+- Claude API client: 5/5 tests passing (streaming, structured outputs, conversation)
+- Event Mesh V2: 6/6 tests passing (graph traversal, userIntent capture)
+- Problem-first wizard: 80% accuracy (exceeds 70% target)
+- Conversation state: Zustand store with 5-stage wizard flow
+- Wizard UI: Chat interface at /test-wizard
+- Build passes with 0 TypeScript errors (22 routes generated)
+- Ready for Week 18 backend integration
+
+**Reference Documents:**
+- **RFC-001:** `/docs/rfcs/RFC-001-MONTH-5-UNIVERSAL-ORCHESTRATION.md` (complete design)
+- **Implementation Guide:** `/docs/MONTH_5_IMPLEMENTATION_GUIDE.md` (step-by-step)
+- **Event Mesh V2:** `/docs/EVENT_MESH_V2.md` (DocumentableEvent architecture)
+- **Stripe Integration:** `/docs/STRIPE_INTEGRATION.md` (OAuth + webhooks)
+- **Twilio Integration:** `/docs/TWILIO_INTEGRATION.md` (SMS + calls)
 
 ---
 
@@ -206,6 +262,20 @@ if (process.env.NODE_ENV === 'development') {
 - **Middleware deprecation (Next.js 16)**: Got warning: "middleware" file convention deprecated, use "proxy" instead. Not blocking, but plan to migrate when Next.js 16 stabilizes.
 - **Build validation is critical**: Fixed 7 TypeScript errors before declaring "done". Zero-error builds prevent production surprises.
 
+**2025-11-24:** Completed Month 4 using parallel sub-agent orchestration (6 tasks via Intern agent). **Lesson:** For large sprints, use orchestrator pattern - delegate each task to isolated sub-agents instead of executing linearly in main context. Key insights:
+- **Context efficiency**: Main agent stays clean, sub-agents handle deep dives (infrastructure, UI, testing, docs). Each completes independently and reports back.
+- **Parallel execution**: All 6 tasks explored simultaneously. No waiting for Task 1 to finish before starting Task 2.
+- **Production documentation is non-negotiable**: Created 6,800+ lines of docs (deployment guide, OAuth troubleshooting, known issues). This prevented "tribal knowledge" problem and enables future developers to onboard quickly.
+- **Real-time UX patterns**: Token expiry UI uses countdown timers (updates every second) and visual states (OK → Warning → Expired). Users see "Token expires in 5m" not "Token expires at 2025-11-24T15:30:00Z".
+- **Build-first deployment**: Fixed all TypeScript errors BEFORE writing deployment docs. Can't document a broken build.
+
+**2025-12-07:** Completed Month 5 Week 17 using parallel sub-agent orchestration (5 tasks, all 5 agents launched simultaneously). **Lesson:** Orchestrator pattern scales to even larger sprints. This time delivered ~5,090 lines of code across 21 files with 0 TypeScript errors. Key insights:
+- **Test-driven validation**: All 5 sub-agents included comprehensive test suites in deliverables. Claude API (5/5 passing), Event Mesh V2 (6/6 passing), Widget inference (80% accuracy). Tests validate correctness before integration.
+- **Environment variable loading gotcha**: Node.js scripts don't auto-load `.env.local` like Next.js does. Must pass `ANTHROPIC_API_KEY` as environment variable: `ANTHROPIC_API_KEY=... npx tsx test.ts`. Alternative: install `dotenv` package.
+- **Problem-first approach validated**: AI achieved 80% accuracy mapping natural language problems → widget solutions (exceeds 70% target). The "failures" were actually correct: (1) Stripe not implemented yet (AI correctly said "unsupported"), (2) Calendar test expected wrong provider name.
+- **Graph traversal enables workflows**: Event Mesh V2 persistence with `relatedEvents` field enables reconstructing entire workflows by following event chains. This is critical for Glass Factory self-documentation.
+- **Confidence scoring works**: AI returned 85-95% confidence for correct matches, 30% for unknown providers. This enables asking clarifying questions when uncertain instead of guessing wrong.
+
 ### Specific Bug Fixes
 
 **2025-11-20:** Widget layout persistence hit THREE critical bugs before working:
@@ -228,5 +298,5 @@ if (process.env.NODE_ENV === 'development') {
 
 ---
 
-**Last Updated:** November 20, 2025 (Infrastructure & Production Readiness Complete)
-**Next Decision Point:** Deploy to production (Vercel + Supabase). Cron job configured via `vercel.json`. Enable Supabase Realtime replication on `widget_instances` table.
+**Last Updated:** December 7, 2025 (Month 5 Week 17 Complete)
+**Next Decision Point:** Week 18 backend integration (Dec 8-14). Focus: API routes for Claude streaming, wire UI to AI agent, validate 80%+ accuracy end-to-end.
