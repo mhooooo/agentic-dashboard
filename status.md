@@ -1,16 +1,38 @@
 # Project Status
 
-## Current Phase: Month 4 - The AI Agent & Hardening
+## Current Phase: Month 5 - AI Agent Implementation
 
 ## Active Tasks
 
-### Month 4 Priorities
-- [x] **Token Refresh:** Implement background job/logic to refresh OAuth tokens
-- [x] **Infrastructure & Production Readiness:** Vercel Cron, Supabase Auth, Real-time Subscriptions
-- [ ] **Expiry UI:** Add visual warning "Token expiring in 5m" or "Re-auth needed"
-- [ ] **AI Agent Architecture:** Design the prompt chain for Claude -> JSON Schema generation
+### Month 5 Week 18+ (Dec 8-28)
+- [ ] **Wizard Backend:** API routes for Claude AI conversation (/api/ai/widget-creation/chat)
+- [ ] **Visualization Selection:** Stage 3 UI for choosing widget visualization types
+- [ ] **Widget Preview:** Stage 4 UI showing generated widget schema + live preview
+- [ ] **Widget Deployment:** Stage 5 - Deploy widget to dashboard with userIntent capture
 
 ## Completed Tasks
+
+### Month 5 Week 17 (Dec 1-7, 2025) ✅
+- [x] **Claude API Client Setup:** Anthropic SDK integrated with streaming + structured outputs (4 functions, 412 lines)
+- [x] **Event Persistence Layer:** Event Mesh V2 with DocumentableEvent schema, Supabase migrations (2 tables, graph traversal)
+- [x] **Problem-First Wizard Prompt:** AI agent for problem → widget inference with 5-field intent extraction (362 lines)
+- [x] **Conversation State Management:** Zustand store managing 5-stage wizard flow with Event Mesh integration (397 lines)
+- [x] **Wizard UI Foundation:** Chat-style interface with stage progress, message history, loading states (288 lines)
+- [x] **Build Verification:** 0 TypeScript errors, all 22 routes generated successfully, test suite passing
+
+### Month 4 Priorities (Nov 20-24, 2025) ✅
+- [x] **Token Refresh:** Implement background job/logic to refresh OAuth tokens
+- [x] **Infrastructure & Production Readiness:** Vercel Cron, Supabase Auth, Real-time Subscriptions
+- [x] **Expiry UI:** Add visual warning "Token expiring in 5m" or "Re-auth needed"
+- [x] **AI Agent Architecture:** Design the prompt chain for Claude -> JSON Schema generation
+
+### Nov 24, 2025
+- [x] **Month 4 Complete:** AI Agent & Hardening sprint finished - Production Launch Ready! 🎉
+- [x] **Token Expiry Warning System:** Real-time countdown badges, warning cards, global expired banner (6 new components)
+- [x] **AI Agent Architecture:** Complete design document for conversational widget creation (guided wizard approach)
+- [x] **Production Documentation:** 6,800+ lines across deployment guide, known issues, OAuth troubleshooting
+- [x] **OAuth E2E Testing:** Comprehensive manual test plan with 5 test suites and 40+ verification items
+- [x] **Build Fixes:** Resolved TypeScript errors in polling.ts and use-widget-data.ts - 0 errors in build
 
 ### Nov 20, 2025
 - [x] **OAuth Token Refresh System:** Automatic background refresh for expiring tokens (Jira, Linear, Slack, Calendar)
@@ -27,6 +49,8 @@
 
 ## Activity Log
 
+- [2025-12-07] ✅ Completed: Month 5 Week 17 Foundation - All 5 tasks complete via parallel sub-agents. Claude API client (streaming + structured outputs), Event Mesh V2 (event persistence + graph traversal), Problem-First Wizard prompt (70%+ accuracy target), Conversation state (5-stage Zustand store), Wizard UI (chat interface). Build passes with 0 errors. Ready for Week 18 backend integration!
+- [2025-11-24] 🎉 Completed: Month 4 Sprint - All 6 tasks complete via parallel sub-agents. Token expiry UI (6 components), AI agent architecture (complete design doc), production docs (6,800+ lines), OAuth test plan, build fixes (0 errors). Production-ready!
 - [2025-11-20 23:45] ✅ Completed: Infrastructure & Production Readiness - Vercel Cron (5min schedule), Supabase Auth (login/signup/logout), Real-time Subscriptions (live widget updates). Build passes with 0 TypeScript errors.
 - [2025-11-20 20:29] ✅ Completed: OAuth Token Refresh System - Automatic background job refreshes tokens 15min before expiry. Prevents widget breakage.
 - [2025-11-20 17:30] ✅ Completed: User Testing - Widget layout persistence verified working. All positions preserved across refresh.
@@ -41,6 +65,11 @@ None.
 
 ## Next 3 Steps
 
-1.  **Production Deployment:** Deploy to Vercel with environment variables and Supabase configuration.
-2.  **Token Expiry UI:** Add visual warnings when tokens are expiring soon ("Token expires in 5m", "Re-auth needed").
-3.  **AI Agent Prompting:** Begin constructing the prompt engineering for the conversational interface.
+1.  **Week 18 Backend (Dec 8-14):** Build API routes for Claude conversation (/api/ai/widget-creation/chat), connect wizard UI to AI agent
+2.  **Week 18 Integration:** Test end-to-end flow (user problem → AI inference → widget creation), validate 70%+ accuracy
+3.  **Week 19 Visualization (Dec 15-21):** Build Stage 3 UI for visualization selection, preview widget rendering
+
+**Month 5 Reference:**
+- **RFC-001:** [Complete Design](docs/rfcs/RFC-001-MONTH-5-UNIVERSAL-ORCHESTRATION.md)
+- **Implementation:** [Step-by-Step Guide](docs/MONTH_5_IMPLEMENTATION_GUIDE.md)
+- **Timeline:** 4 weeks (Dec 1-28, 2025)

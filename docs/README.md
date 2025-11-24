@@ -4,6 +4,49 @@ Complete documentation for the Agentic Dashboard project.
 
 ---
 
+## Month 5: Universal Orchestration Layer (December 2025)
+
+**[RFC-001: Universal Orchestration & Glass Factory](rfcs/RFC-001-MONTH-5-UNIVERSAL-ORCHESTRATION.md)** - 2,500 lines
+- Complete vision and architectural decisions
+- Problem-first wizard design ("What problem are you solving?")
+- Glass Factory system (self-documenting via Twitter threads)
+- DocumentableEvent with userIntent field
+- Knowledge graph integration
+- Journalist Agent architecture
+- Domain expansion (Stripe + Twilio)
+- Success metrics and implementation timeline
+
+**[Month 5 Implementation Guide](MONTH_5_IMPLEMENTATION_GUIDE.md)** - 800 lines
+- Step-by-step execution for all 3 phases
+- Week-by-week breakdown (Week 17-20)
+- Testing checklists
+- Troubleshooting guide
+- Migration from Month 4
+
+**[Event Mesh V2 Architecture](EVENT_MESH_V2.md)** - 600 lines
+- DocumentableEvent schema specification
+- userIntent field structure and best practices
+- Knowledge graph integration
+- API reference (publishDocumentable, queryEventHistory)
+- Migration guide from V1
+- Code examples for common patterns
+
+**[Stripe Integration](STRIPE_INTEGRATION.md)** - 400 lines
+- OAuth 2.0 via Stripe Connect
+- Provider adapter implementation
+- "Recent Payments" widget
+- Event publishing (payment.received)
+- Testing with Stripe test mode
+
+**[Twilio Integration](TWILIO_INTEGRATION.md)** - 400 lines
+- API key authentication
+- Provider adapter implementation
+- "Send SMS" action widget
+- Automation example (payment → SMS)
+- Testing and troubleshooting
+
+---
+
 ## Getting Started
 
 ### For New Developers
@@ -319,5 +362,5 @@ Found a mistake? Have a suggestion?
 ---
 
 **Last Updated:** November 24, 2025
-**Documentation Version:** 1.0.0
-**Project Phase:** Month 4 Complete - Production Ready
+**Documentation Version:** 1.1.0
+**Project Phase:** Month 5 Documentation Complete - Ready for Execution

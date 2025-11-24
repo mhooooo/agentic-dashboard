@@ -97,7 +97,9 @@ export function useWebhookPolling(options: WebhookPollingOptions = {}) {
             // Cleanup old processed IDs (keep last 100)
             if (processedEventsRef.current.size > 100) {
               const firstId = processedEventsRef.current.values().next().value;
-              processedEventsRef.current.delete(firstId);
+              if (firstId) {
+                processedEventsRef.current.delete(firstId);
+              }
             }
           });
 
@@ -138,26 +140,22 @@ export function useWebhookStatus() {
     eventCount: 0,
   });
 
+  // Get event log from the store
+  const eventLog = useEventMesh((state) => state.eventLog);
+
   // Subscribe to webhook events
   useEffect(() => {
-    const unsubscribe = useEventMesh.subscribe(
-      (state) => state.eventLog,
-      (eventLog) => {
-        // Find webhook events
-        const webhookEvents = eventLog.filter((e) => e.source?.startsWith('webhook:'));
+    // Find webhook events
+    const webhookEvents = eventLog.filter((e) => e.source?.startsWith('webhook:'));
 
-        if (webhookEvents.length > 0) {
-          const latest = webhookEvents[webhookEvents.length - 1];
-          setStatus({
-            lastEventTime: latest.timestamp,
-            eventCount: webhookEvents.length,
-          });
-        }
-      }
-    );
-
-    return unsubscribe;
-  }, []);
+    if (webhookEvents.length > 0) {
+      const latest = webhookEvents[webhookEvents.length - 1];
+      setStatus({
+        lastEventTime: latest.timestamp,
+        eventCount: webhookEvents.length,
+      });
+    }
+  }, [eventLog]);
 
   return status;
 }
