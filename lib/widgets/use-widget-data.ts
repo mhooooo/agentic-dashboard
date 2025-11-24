@@ -101,7 +101,7 @@ export function useWidgetData<T = any>(options: UseWidgetDataOptions): WidgetDat
     // Use SWR with custom fetcher
     const result = useSWR(
       swrKey,
-      ([endpoint, method, params]) => apiFetcher(endpoint, { endpoint: params?.endpoint || '', method, params: params?.params }),
+      ([endpoint, method, params]: [string, string, any]) => apiFetcher(endpoint, { endpoint: params?.endpoint || '', method, params: params?.params }),
       {
         refreshInterval: apiSource.refreshInterval || 0,
         revalidateOnFocus: false,

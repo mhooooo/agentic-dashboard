@@ -219,7 +219,7 @@ if (process.env.NODE_ENV === 'development') {
 
 ## File Maintenance Protocol
 
-**plan.md** - Update after significant tasks (progress, blockers, next 3 steps)
+**plan.md** - Update after significant tasks (progress, blockers, next 5 steps)
 **changelog.md** - Log bugs/fixes/changes as they happen (date, what changed, why, what it affected)
 **README.md** - Update only for critical execution changes (environment setup, major architecture shifts)
 **CLAUDE.md** - This file. Update when major architectural decisions made, constraints discovered, or phases transition.

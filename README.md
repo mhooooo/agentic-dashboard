@@ -16,28 +16,35 @@ This is our differentiator. Widgets aren't isolated—they talk to each other th
 
 - Node.js 18+ installed
 - npm or yarn
-- Supabase account (for production) or dev mode for local development
+- **For development:** Dev mode works without any setup
+- **For production:** Supabase account + OAuth apps (see [Deployment Guide](docs/DEPLOYMENT.md))
 
-### Installation
+### Local Development Setup
 
 ```bash
-# Navigate to the project (already cloned)
+# 1. Clone the repository (if not already done)
+git clone https://github.com/your-username/agentic-dashboard.git
 cd agentic-dashboard
 
-# Install dependencies (already done)
+# 2. Install dependencies
 npm install
 
-# Copy environment variables template
+# 3. Copy environment template
 cp .env.example .env.local
 
-# Configure environment variables (see below)
+# 4. (Optional) Configure environment variables
 # For development, you can skip Supabase configuration - the app will use dev mode
+# See .env.example for all available options
 
-# Start the development server
+# 5. Start the development server
 npm run dev
+# Or use the dev script to avoid environment variable conflicts:
+./dev.sh
 ```
 
-Visit **http://localhost:3000** (or check terminal for the actual port)
+Visit **http://localhost:3000** to see the dashboard.
+
+**First-time users:** The app will show a welcome widget by default. Click "+ Add GitHub Widget" or "+ Add Jira Widget" to experience the Event Mesh magic.
 
 ### Environment Setup
 
@@ -84,19 +91,21 @@ Visit **http://localhost:3000** (or check terminal for the actual port)
    - Enable replication for `widget_instances` table
    - This enables real-time updates across browser tabs
 
-5. **Deploy to Vercel:**
-   - Connect your GitHub repo to Vercel
-   - Add environment variables in Vercel dashboard
-   - The cron job will automatically run every 5 minutes to refresh OAuth tokens
+5. **Deploy to production:**
+   - See our complete [Deployment Guide](docs/DEPLOYMENT.md) for Vercel + Supabase setup
+   - OAuth token refresh runs automatically via Vercel Cron (every 5 minutes)
+   - Realtime dashboard updates powered by Supabase subscriptions
 
 ### Try the Magic Demo
 
-1. Click "+ Add GitHub Widget"
-2. Click "+ Add Jira Widget"
-3. Click any GitHub PR with "PROJ-123" in the title
-4. **Watch the Jira widget instantly auto-filter to that ticket!** ✨
+1. **Add widgets:** Click "+ Add GitHub Widget" and "+ Add Jira Widget"
+2. **Connect providers:** Go to Settings → Credentials and connect your accounts (OAuth or manual token)
+3. **Experience the magic:** Click any GitHub PR with a Jira ticket ID (e.g., "SCRUM-5: Feature")
+4. **Watch auto-filtering:** The Jira widget instantly filters to that ticket - zero configuration needed!
 
-The magic is happening through the **Event Mesh** - a Zustand-based pub/sub system that allows widgets to broadcast and subscribe to events in real-time.
+The magic happens through the **Event Mesh** - a Zustand-based pub/sub system that lets widgets communicate in real-time without manual wiring.
+
+**New to OAuth?** See our [OAuth Setup Guide](docs/OAUTH_SETUP.md) for step-by-step instructions.
 
 ## 🏗️ Architecture
 
@@ -242,6 +251,31 @@ const renderWidget = (widget: WidgetInstance) => {
 };
 ```
 
+## 🌐 Production Deployment
+
+**Production URL:** *Not yet deployed* (See [Deployment Guide](docs/DEPLOYMENT.md) for setup instructions)
+
+### Documentation
+
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Complete step-by-step production deployment to Vercel + Supabase
+- **[OAuth Setup Guide](docs/OAUTH_SETUP.md)** - Configure OAuth 2.0 for all 5 providers
+- **[OAuth Token Refresh](docs/OAUTH_TOKEN_REFRESH.md)** - Automatic token refresh system documentation
+- **[Known Issues](docs/KNOWN_ISSUES.md)** - Troubleshooting guide and common errors
+- **[Adding New Providers](docs/ADDING_NEW_PROVIDERS.md)** - How to add new integrations
+- **[Architecture Decisions](CLAUDE.md)** - Complete project context and rationale
+
+### Quick Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/agentic-dashboard)
+
+**After deployment:**
+1. Configure environment variables (see [.env.example](.env.example))
+2. Set up Supabase project and run migrations
+3. Configure OAuth apps for providers you want to use
+4. Update `NEXT_PUBLIC_APP_URL` with your Vercel deployment URL
+
+---
+
 ## 🎯 Roadmap
 
 ### Month 1: The "Magic" POC ✅ COMPLETE
@@ -250,7 +284,7 @@ const renderWidget = (widget: WidgetInstance) => {
 
 ### Month 3: The "Factory" ✅ COMPLETE
 
-### Month 4: Infrastructure & Production Readiness 🚧 IN PROGRESS
+### Month 4: Infrastructure & Production Readiness ✅ COMPLETE
 
 **Completed:**
 - ✅ Vercel Cron Job for OAuth token refresh
@@ -259,25 +293,41 @@ const renderWidget = (widget: WidgetInstance) => {
 - ✅ Connection status indicator
 - ✅ Middleware for route protection
 - ✅ Logout functionality
+- ✅ Production deployment documentation
+- ✅ Comprehensive troubleshooting guide
 
-**Next:**
+**Next (Month 5+):**
 - 🔄 AI Agent for conversational widget generation
 - 🔄 Token expiry UI warnings
-- 🔄 Production deployment guide
+- 🔄 Visual widget configuration builder
 
 ## 🐛 Troubleshooting
 
-### "Event not being received by subscriber"
+For comprehensive troubleshooting, see **[Known Issues & Troubleshooting Guide](docs/KNOWN_ISSUES.md)**.
 
+### Quick Fixes
+
+**Event not being received by subscriber:**
 1. Check Safe Mode is **disabled** (should show "🔗 Mesh Enabled")
-2. Open browser console and look for `[Event Mesh]` logs
+2. Open Event Debugger (🐛 button) to inspect event flow
 3. Verify event pattern matches (e.g., `github.*` matches `github.pr.selected`)
 
-### "Widget not rendering"
+**OAuth callback failing:**
+1. Verify `NEXT_PUBLIC_APP_URL` matches your deployment URL exactly
+2. Check OAuth app callback URLs match: `{APP_URL}/api/auth/{provider}/callback`
+3. Clear browser cookies and try again
 
-1. Check `components/Dashboard.tsx` `renderWidget` function
-2. Ensure widget type matches in the switch statement
-3. Check browser console for React errors
+**Widget not rendering:**
+1. Check browser console for errors
+2. Verify provider credentials are connected (Settings → Credentials)
+3. Test API access: Visit `/test-proxy` page to debug connection
+
+**Database connection issues:**
+1. Verify Supabase project is active (not paused)
+2. Check environment variables in Vercel dashboard
+3. Confirm database migrations were run successfully
+
+For more issues, see the [full troubleshooting guide](docs/KNOWN_ISSUES.md).
 
 ## 📄 License
 

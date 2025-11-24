@@ -9,6 +9,8 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { TokenExpiryWarning, type CredentialExpiryStatus } from '@/components/TokenExpiryWarning';
+import { TokenExpiryBadge } from '@/components/TokenExpiryBadge';
 
 interface Provider {
   name: 'github' | 'jira' | 'linear' | 'slack' | 'calendar';
@@ -126,11 +128,13 @@ const PROVIDERS: Provider[] = [
 
 export default function CredentialsPage() {
   const [connectedProviders, setConnectedProviders] = useState<Set<string>>(new Set());
+  const [expiryStatuses, setExpiryStatuses] = useState<CredentialExpiryStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch connected providers on mount
+  // Fetch connected providers and expiry status on mount
   useEffect(() => {
     fetchConnectedProviders();
+    fetchExpiryStatus();
 
     // Handle OAuth callback success/error messages
     const params = new URLSearchParams(window.location.search);
@@ -170,6 +174,24 @@ export default function CredentialsPage() {
     }
   };
 
+  const fetchExpiryStatus = async () => {
+    try {
+      const response = await fetch('/api/credentials/expiry');
+      const result = await response.json();
+
+      if (result.success) {
+        setExpiryStatuses(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching expiry status:', error);
+    }
+  };
+
+  const handleRefresh = () => {
+    fetchConnectedProviders();
+    fetchExpiryStatus();
+  };
+
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto p-8">
@@ -186,15 +208,22 @@ export default function CredentialsPage() {
         Connect your external accounts to fetch real data. Your credentials are encrypted and never exposed to the client.
       </p>
 
+      {/* Token Expiry Warnings */}
+      <TokenExpiryWarning providers={expiryStatuses} onRefresh={handleRefresh} />
+
       <div className="space-y-6">
-        {PROVIDERS.map((provider) => (
-          <ProviderCard
-            key={provider.name}
-            provider={provider}
-            connected={connectedProviders.has(provider.name)}
-            onUpdate={fetchConnectedProviders}
-          />
-        ))}
+        {PROVIDERS.map((provider) => {
+          const expiryStatus = expiryStatuses.find(s => s.provider === provider.name);
+          return (
+            <ProviderCard
+              key={provider.name}
+              provider={provider}
+              connected={connectedProviders.has(provider.name)}
+              expiryStatus={expiryStatus}
+              onUpdate={handleRefresh}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -203,10 +232,12 @@ export default function CredentialsPage() {
 function ProviderCard({
   provider,
   connected,
+  expiryStatus,
   onUpdate,
 }: {
   provider: Provider;
   connected: boolean;
+  expiryStatus?: CredentialExpiryStatus;
   onUpdate: () => void;
 }) {
   const [showForm, setShowForm] = useState(false);
@@ -232,7 +263,7 @@ function ProviderCard({
       const result = await response.json();
 
       if (result.success) {
-        toast.success(`✅ Connected as ${result.data.username}`);
+        toast.success(`Connected as ${result.data.username}`);
         return true;
       } else {
         toast.error(result.error?.message || 'Connection test failed');
@@ -258,7 +289,7 @@ function ProviderCard({
       const result = await response.json();
 
       if (result.success) {
-        toast.success(`✅ ${provider.displayName} credentials saved`);
+        toast.success(`${provider.displayName} credentials saved`);
         setShowForm(false);
         setFormData({});
         onUpdate();
@@ -302,6 +333,14 @@ function ProviderCard({
             <h3 className="text-lg font-semibold flex items-center gap-2">
               {provider.displayName}
               {connected && <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Connected</span>}
+              {expiryStatus && (
+                <TokenExpiryBadge
+                  status={expiryStatus.status}
+                  expiresAt={expiryStatus.expiresAt}
+                  timeRemaining={expiryStatus.timeRemaining}
+                  compact
+                />
+              )}
             </h3>
             <p className="text-sm text-muted-foreground">{provider.description}</p>
           </div>
