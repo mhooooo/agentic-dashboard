@@ -33,9 +33,13 @@ export function WidgetCreationWizard({
   const reset = useConversationStore((state) => state.reset);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastUserMessage, setLastUserMessage] = useState<string | null>(null);
 
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -52,30 +56,204 @@ export function WidgetCreationWizard({
     }
   }, [isOpen, messages.length, addMessage]);
 
+  // Cleanup: Abort pending requests on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
     const userMessage = inputValue.trim();
     setInputValue('');
+    setError(null);
+    setLastUserMessage(userMessage);
 
     // Add user message
     addMessage('user', userMessage);
     setIsLoading(true);
 
-    try {
-      // Call API (placeholder for now - will be implemented in Task 6)
-      // For now, just echo back
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Create abort controller for this request
+    abortControllerRef.current = new AbortController();
 
-      addMessage(
-        'assistant',
-        `I understand you're working on: "${userMessage}". Let me think about how to help you with that...`
-      );
+    try {
+      // Stage 1: Problem Discovery - Returns structured JSON (not streaming)
+      if (stage === 'problem_discovery') {
+        const response = await fetch('/api/ai/widget-creation/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: userMessage,
+            stage: stage,
+            conversationHistory: messages.map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+          }),
+          signal: abortControllerRef.current.signal,
+        });
+
+        if (!response.ok) {
+          if (response.status === 429) {
+            throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+          } else if (response.status === 500) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Server error. Please try again.');
+          } else {
+            throw new Error(`API error: ${response.status}`);
+          }
+        }
+
+        const data = await response.json();
+
+        // Add AI response
+        addMessage('assistant', data.message);
+
+        // Store extracted intent and inferred widget
+        if (data.extractedIntent) {
+          useConversationStore.getState().setExtractedIntent(data.extractedIntent);
+        }
+        if (data.inferredWidget) {
+          useConversationStore.getState().setInferredWidget(data.inferredWidget);
+        }
+
+        // Progress to next stage
+        if (data.nextStage) {
+          useConversationStore.getState().setStage(data.nextStage);
+        }
+
+        // Reset retry count on success
+        setRetryCount(0);
+      } else {
+        // Stages 2-5: Use streaming for natural conversation
+        await handleStreamingResponse(userMessage);
+        setRetryCount(0);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
-      addMessage('assistant', 'Sorry, something went wrong. Please try again.');
+
+      // Handle abort errors (user cancelled)
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Request cancelled by user');
+        return;
+      }
+
+      // Set error message for display
+      const errorMessage =
+        error instanceof Error ? error.message : 'Something went wrong. Please try again.';
+      setError(errorMessage);
+
+      addMessage('assistant', `⚠️ ${errorMessage}`);
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleRetry = () => {
+    if (!lastUserMessage) return;
+
+    setRetryCount((prev) => prev + 1);
+    setInputValue(lastUserMessage);
+
+    // Automatically trigger send after a brief delay
+    setTimeout(() => {
+      handleSendMessage();
+    }, 100);
+  };
+
+  const handleStreamingResponse = async (userMessage: string) => {
+    const extractedIntent = useConversationStore.getState().extractedIntent;
+    const inferredWidget = useConversationStore.getState().inferredWidget;
+
+    const response = await fetch('/api/ai/widget-creation/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: userMessage,
+        stage: stage,
+        conversationHistory: messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+        extractedIntent,
+        inferredWidget,
+      }),
+      signal: abortControllerRef.current?.signal,
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+      } else if (response.status === 500) {
+        throw new Error('Server error. Please try again.');
+      }
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    // Read streaming response
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No response body');
+    }
+
+    const decoder = new TextDecoder();
+    let accumulatedText = '';
+
+    // Add placeholder message that we'll update
+    const messageIndex = messages.length;
+    addMessage('assistant', '');
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        // Decode chunk
+        const chunk = decoder.decode(value, { stream: true });
+
+        // Parse SSE events (format: "data: {json}\n\n")
+        const lines = chunk.split('\n\n');
+
+        for (const line of lines) {
+          if (!line.trim() || !line.startsWith('data: ')) continue;
+
+          const jsonStr = line.replace('data: ', '');
+
+          try {
+            const data = JSON.parse(jsonStr);
+
+            if (data.text) {
+              // Accumulate text
+              accumulatedText += data.text;
+
+              // Update message in store
+              useConversationStore.setState((state) => {
+                const newMessages = [...state.messages];
+                newMessages[messageIndex] = {
+                  ...newMessages[messageIndex],
+                  content: accumulatedText,
+                };
+                return { messages: newMessages };
+              });
+            } else if (data.done) {
+              // Stream complete
+              break;
+            } else if (data.error) {
+              throw new Error(data.error);
+            }
+          } catch (parseError) {
+            console.error('Failed to parse SSE data:', jsonStr, parseError);
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
     }
   };
 
@@ -137,11 +315,23 @@ export function WidgetCreationWizard({
             <MessageBubble key={idx} message={msg} />
           ))}
           {isLoading && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <div className="w-2 h-2 rounded-full bg-current animate-bounce" style={{ animationDelay: '0ms' }} />
-              <div className="w-2 h-2 rounded-full bg-current animate-bounce" style={{ animationDelay: '150ms' }} />
-              <div className="w-2 h-2 rounded-full bg-current animate-bounce" style={{ animationDelay: '300ms' }} />
-              <span className="ml-2 text-sm">Thinking...</span>
+            <div className="flex items-center gap-2 text-muted-foreground bg-muted/50 rounded-lg px-4 py-3">
+              <div className="flex gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-current animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 rounded-full bg-current animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 rounded-full bg-current animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+              <span className="text-sm font-medium">
+                {stage === 'problem_discovery'
+                  ? 'Understanding your problem...'
+                  : stage === 'clarifying_questions'
+                  ? 'Thinking of questions...'
+                  : stage === 'visualization'
+                  ? 'Generating options...'
+                  : stage === 'preview'
+                  ? 'Creating preview...'
+                  : 'Processing...'}
+              </span>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -149,6 +339,25 @@ export function WidgetCreationWizard({
 
         {/* Input */}
         <div className="p-4 border-t bg-muted/30">
+          {/* Error display */}
+          {error && (
+            <div className="mb-3 p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-start justify-between gap-2">
+              <div className="flex-1">
+                <p className="text-sm text-destructive font-medium">Error</p>
+                <p className="text-xs text-destructive/80 mt-1">{error}</p>
+              </div>
+              {lastUserMessage && (
+                <button
+                  onClick={handleRetry}
+                  disabled={isLoading}
+                  className="px-3 py-1.5 text-xs bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 disabled:opacity-50 transition-colors"
+                >
+                  Retry {retryCount > 0 && `(${retryCount})`}
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-2">
             <input
               type="text"

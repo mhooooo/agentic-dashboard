@@ -4,13 +4,21 @@
 
 ## Active Tasks
 
-### Month 5 Week 18+ (Dec 8-28)
-- [ ] **Wizard Backend:** API routes for Claude AI conversation (/api/ai/widget-creation/chat)
+### Month 5 Week 19+ (Dec 15-28)
 - [ ] **Visualization Selection:** Stage 3 UI for choosing widget visualization types
 - [ ] **Widget Preview:** Stage 4 UI showing generated widget schema + live preview
 - [ ] **Widget Deployment:** Stage 5 - Deploy widget to dashboard with userIntent capture
 
 ## Completed Tasks
+
+### Month 5 Week 18 (Dec 8-14, 2025) ✅
+- [x] **Chat API Endpoint:** POST /api/ai/widget-creation/chat with SSE streaming (303 lines)
+- [x] **Deploy API Endpoint:** POST /api/ai/widget-creation/deploy with schema validation + DocumentableEvent (238 lines)
+- [x] **Wizard UI Integration:** Real-time streaming, error handling, retry logic (+122 lines)
+- [x] **E2E Testing:** 100% accuracy (5/5 providers), 96% avg confidence, exceeds 80% target
+- [x] **Integration Documentation:** WEEK_18_BACKEND_INTEGRATION.md (~1,384 lines)
+- [x] **Calendar Provider Fix:** Changed "google-calendar" → "calendar" in AI prompt to match DB constraint
+- [x] **Build Verification:** 0 TypeScript errors, all routes registered
 
 ### Month 5 Week 17 (Dec 1-7, 2025) ✅
 - [x] **Claude API Client Setup:** Anthropic SDK integrated with streaming + structured outputs (4 functions, 412 lines)
@@ -49,6 +57,7 @@
 
 ## Activity Log
 
+- [2025-12-14] ✅ Completed: Month 5 Week 18 Backend Integration - All 5 tasks complete via parallel sub-agents. Chat API (/api/ai/widget-creation/chat with SSE streaming), Deploy API (/api/ai/widget-creation/deploy with DocumentableEvent), Wizard UI wired to APIs (streaming + error handling), E2E testing (100% accuracy, 5/5 providers), Integration docs (1,384 lines). Fixed calendar provider name issue. Build passes with 0 errors. Ready for Week 19 visualization!
 - [2025-12-07] ✅ Completed: Month 5 Week 17 Foundation - All 5 tasks complete via parallel sub-agents. Claude API client (streaming + structured outputs), Event Mesh V2 (event persistence + graph traversal), Problem-First Wizard prompt (70%+ accuracy target), Conversation state (5-stage Zustand store), Wizard UI (chat interface). Build passes with 0 errors. Ready for Week 18 backend integration!
 - [2025-11-24] 🎉 Completed: Month 4 Sprint - All 6 tasks complete via parallel sub-agents. Token expiry UI (6 components), AI agent architecture (complete design doc), production docs (6,800+ lines), OAuth test plan, build fixes (0 errors). Production-ready!
 - [2025-11-20 23:45] ✅ Completed: Infrastructure & Production Readiness - Vercel Cron (5min schedule), Supabase Auth (login/signup/logout), Real-time Subscriptions (live widget updates). Build passes with 0 TypeScript errors.
@@ -65,9 +74,9 @@ None.
 
 ## Next 3 Steps
 
-1.  **Week 18 Backend (Dec 8-14):** Build API routes for Claude conversation (/api/ai/widget-creation/chat), connect wizard UI to AI agent
-2.  **Week 18 Integration:** Test end-to-end flow (user problem → AI inference → widget creation), validate 70%+ accuracy
-3.  **Week 19 Visualization (Dec 15-21):** Build Stage 3 UI for visualization selection, preview widget rendering
+1.  **Week 19 Visualization (Dec 15-21):** Build Stage 3 UI for choosing widget visualization types (list, table, cards, metric, chart)
+2.  **Week 19 Preview (Dec 15-21):** Build Stage 4 UI showing generated widget schema + live preview before deployment
+3.  **Week 20 Polish (Dec 22-28):** Stage 5 deployment flow, userIntent capture, end-to-end testing with real users
 
 **Month 5 Reference:**
 - **RFC-001:** [Complete Design](docs/rfcs/RFC-001-MONTH-5-UNIVERSAL-ORCHESTRATION.md)

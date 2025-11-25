@@ -83,11 +83,11 @@ Available providers and use cases:
 - **Jira**: Sprint planning, issue tracking, project management, workflows
 - **Linear**: Task management, sprint tracking, issue tracking
 - **Slack**: Team messages, channel activity, notifications, mentions
-- **Google Calendar**: Meetings, events, schedules, availability
+- **Calendar**: Meetings, events, schedules, availability (Google Calendar)
 
 Examples of problem → widget mapping:
 1. "Track pull requests" → GitHub PR widget (pr-list)
-2. "See team calendar" → Google Calendar widget (calendar-grid)
+2. "See team calendar" → Calendar widget (calendar-grid)
 3. "Sprint tasks" → Jira issue board widget (issue-board)
 4. "Slack messages" → Slack message list widget (message-list)
 5. "Monitor Linear tickets" → Linear issue list widget (issue-list)

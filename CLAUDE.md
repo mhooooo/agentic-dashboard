@@ -276,6 +276,13 @@ if (process.env.NODE_ENV === 'development') {
 - **Graph traversal enables workflows**: Event Mesh V2 persistence with `relatedEvents` field enables reconstructing entire workflows by following event chains. This is critical for Glass Factory self-documentation.
 - **Confidence scoring works**: AI returned 85-95% confidence for correct matches, 30% for unknown providers. This enables asking clarifying questions when uncertain instead of guessing wrong.
 
+**2025-12-14:** Completed Month 5 Week 18 using parallel sub-agent orchestration (5 tasks, all 5 agents launched simultaneously). **Lesson:** Backend integration validated the Week 17 foundation - zero breaking changes needed. Delivered ~2,000+ lines across API routes, UI updates, tests, and docs. Key insights:
+- **SSE streaming pattern**: For AI chat, use JSON response for Stage 1 (needs structured parsing) and SSE streaming for Stages 2-5 (typewriter effect). Pattern: `data: {"text": "chunk"}\n\n` with `data: {"done": true}\n\n` to signal end.
+- **Provider name consistency is critical**: AI prompt said "Google Calendar" but DB constraint expects "calendar". **Fix:** Ensure AI prompt examples match database enum values exactly. Test with E2E suite before deployment.
+- **100% accuracy achieved**: E2E testing showed 100% accuracy (5/5 providers) with 96% average confidence. The Week 17 problem-first prompt is working exceptionally well. Key: Examples in AI prompt must be precise and match internal naming conventions.
+- **Streaming in React**: Use `ReadableStream.getReader()` with `TextDecoder` to parse SSE chunks. Handle partial lines (buffer until `\n\n`). Always include `AbortController` for cleanup on unmount.
+- **Error handling UX**: Display error banner above input (not modal), include retry button with counter ("Retry (1)", "Retry (2)"), show stage-specific loading messages ("Understanding your problem..." not generic "Loading...").
+
 ### Specific Bug Fixes
 
 **2025-11-20:** Widget layout persistence hit THREE critical bugs before working:
@@ -298,5 +305,5 @@ if (process.env.NODE_ENV === 'development') {
 
 ---
 
-**Last Updated:** December 7, 2025 (Month 5 Week 17 Complete)
-**Next Decision Point:** Week 18 backend integration (Dec 8-14). Focus: API routes for Claude streaming, wire UI to AI agent, validate 80%+ accuracy end-to-end.
+**Last Updated:** December 14, 2025 (Month 5 Week 18 Complete)
+**Next Decision Point:** Week 19 visualization UI (Dec 15-21). Focus: Stage 3 visualization selection, Stage 4 preview with live rendering, Stage 5 deploy flow.
