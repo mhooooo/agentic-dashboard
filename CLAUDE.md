@@ -283,6 +283,13 @@ if (process.env.NODE_ENV === 'development') {
 - **Streaming in React**: Use `ReadableStream.getReader()` with `TextDecoder` to parse SSE chunks. Handle partial lines (buffer until `\n\n`). Always include `AbortController` for cleanup on unmount.
 - **Error handling UX**: Display error banner above input (not modal), include retry button with counter ("Retry (1)", "Retry (2)"), show stage-specific loading messages ("Understanding your problem..." not generic "Loading...").
 
+**2025-12-21:** Completed Month 5 Week 19 using parallel sub-agent orchestration (5 tasks, all 5 agents launched simultaneously). **Lesson:** Visualization UI builds on stable foundation. Delivered ~4,110 lines across components, store extensions, tests, and docs. Key insights:
+- **`global` vs `globalThis`**: `global` is Node.js-only, crashes in browser with "global is not defined". **Fix:** Always use `globalThis` which works in both environments. For TypeScript type narrowing, wrap in helper function.
+- **Turbopack bundles aggressively**: Next.js 16 Turbopack bundles lib/ files for client even if only server components import them. Code that touches `global` must be defensive.
+- **localStorage persistence works**: Zustand `persist` middleware with localStorage enables wizard state survival across page refresh. Users don't lose progress on accidental refresh.
+- **Visual feedback matters**: Visualization selector with SVG thumbnails + AI recommendation badge provides intuitive UX. Users understand options without reading descriptions.
+- **Schema validation in UI**: Catching JSON errors before deploy prevents frustrating API failures. Validate early, show specific error messages.
+
 ### Specific Bug Fixes
 
 **2025-11-20:** Widget layout persistence hit THREE critical bugs before working:
@@ -305,5 +312,5 @@ if (process.env.NODE_ENV === 'development') {
 
 ---
 
-**Last Updated:** December 14, 2025 (Month 5 Week 18 Complete)
-**Next Decision Point:** Week 19 visualization UI (Dec 15-21). Focus: Stage 3 visualization selection, Stage 4 preview with live rendering, Stage 5 deploy flow.
+**Last Updated:** December 21, 2025 (Month 5 Week 19 Complete)
+**Next Decision Point:** Week 20 polish (Dec 22-28). Focus: Stage 5 deploy success UX, error recovery, mobile responsive, user testing.

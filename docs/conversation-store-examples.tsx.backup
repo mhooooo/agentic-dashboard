@@ -1,0 +1,421 @@
+/**
+ * Conversation Store - Usage Examples for Stages 3-4
+ *
+ * This file demonstrates how to use the new Stage 3 (visualization selection)
+ * and Stage 4 (preview & deployment) features of the conversation store.
+ */
+
+import { useConversationStore, VisualizationType } from './conversation-store';
+import { UniversalWidgetDefinition } from '@/lib/universal-widget/schema';
+
+// =============================================================================
+// STAGE 3: VISUALIZATION SELECTION
+// =============================================================================
+
+/**
+ * Example: Visualization Selector Component
+ *
+ * This component allows users to select how they want to visualize their data.
+ */
+export function VisualizationSelectorExample() {
+  const { selectedVisualization, setVisualization, canProgressToNextStage } =
+    useConversationStore();
+
+  const handleSelectVisualization = (type: VisualizationType) => {
+    // Set the visualization type - this will:
+    // 1. Update selectedVisualization state
+    // 2. Update canProgressToNextStage to true
+    // 3. Publish 'wizard.visualization.selected' event to Event Mesh
+    setVisualization(type);
+
+    // After selection, you can check if ready to progress
+    console.log('Can progress to preview?', canProgressToNextStage);
+  };
+
+  const visualizationOptions: { type: VisualizationType; label: string; description: string }[] = [
+    {
+      type: 'list',
+      label: 'List View',
+      description: 'Like an inbox - items stacked vertically',
+    },
+    {
+      type: 'table',
+      label: 'Table View',
+      description: 'Spreadsheet-like with sortable columns',
+    },
+    {
+      type: 'cards',
+      label: 'Card Grid',
+      description: 'Visual cards in a grid layout',
+    },
+    {
+      type: 'metric',
+      label: 'Metric',
+      description: 'Single number with optional comparison',
+    },
+    {
+      type: 'chart',
+      label: 'Chart',
+      description: 'Line, bar, or pie chart',
+    },
+  ];
+
+  return (
+    <div>
+      <h3>How should I display the data?</h3>
+      <div className="grid grid-cols-2 gap-4">
+        {visualizationOptions.map((option) => (
+          <button
+            key={option.type}
+            onClick={() => handleSelectVisualization(option.type)}
+            className={
+              selectedVisualization === option.type ? 'selected' : ''
+            }
+          >
+            <h4>{option.label}</h4>
+            <p>{option.description}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// STAGE 4: SCHEMA GENERATION & PREVIEW
+// =============================================================================
+
+/**
+ * Example: Schema Generator
+ *
+ * This demonstrates how to generate and validate a widget schema
+ * based on user intent, inferred widget, and selected visualization.
+ */
+export async function generateSchemaExample() {
+  const store = useConversationStore.getState();
+
+  // Get the collected information from previous stages
+  const { extractedIntent, inferredWidget, selectedVisualization } = store;
+
+  if (!extractedIntent || !inferredWidget || !selectedVisualization) {
+    console.error('Missing required data for schema generation');
+    return;
+  }
+
+  // Generate the schema (in a real implementation, this would call an AI endpoint)
+  const schema: UniversalWidgetDefinition = {
+    metadata: {
+      name: `${inferredWidget.provider} ${inferredWidget.widgetType}`,
+      description: extractedIntent.problemSolved,
+      category: 'custom',
+      version: 1,
+    },
+    dataSource: {
+      provider: inferredWidget.provider,
+      endpoint: '/api/data', // Would be determined by AI
+      method: 'GET',
+      pollInterval: 60,
+    },
+    fields: [
+      {
+        name: 'title',
+        path: '$.title',
+        label: 'Title',
+        type: 'string',
+      },
+      // More fields would be added by AI...
+    ],
+    layout: {
+      type: selectedVisualization,
+      // Layout configuration varies by type
+      ...(selectedVisualization === 'list' && {
+        fields: {
+          title: 'title',
+        },
+      }),
+    },
+  };
+
+  // Set the schema - this will:
+  // 1. Validate the schema automatically
+  // 2. Update generatedSchema state
+  // 3. Set schemaValidationError if invalid
+  // 4. Update canProgressToNextStage based on validation
+  // 5. Publish 'wizard.schema.generated' event
+  store.setSchema(schema);
+
+  // Check if validation passed
+  if (store.schemaValidationError) {
+    console.error('Schema validation failed:', store.schemaValidationError);
+  } else {
+    console.log('Schema is valid! Ready for preview.');
+  }
+}
+
+/**
+ * Example: Schema Preview Component
+ *
+ * Shows the generated schema and allows user to review before deploying.
+ */
+export function SchemaPreviewExample() {
+  const {
+    generatedSchema,
+    schemaValidationError,
+    previewData,
+    setPreviewData,
+    canProgressToNextStage,
+  } = useConversationStore();
+
+  // Fetch sample data for preview
+  const handleLoadPreviewData = async () => {
+    if (!generatedSchema) return;
+
+    // In a real implementation, this would call the actual API
+    const sampleData = [
+      { title: 'Sample Item 1', status: 'open' },
+      { title: 'Sample Item 2', status: 'closed' },
+    ];
+
+    // Set preview data for rendering
+    setPreviewData(sampleData);
+  };
+
+  if (!generatedSchema) {
+    return <div>Loading schema...</div>;
+  }
+
+  if (schemaValidationError) {
+    return (
+      <div className="error">
+        <h3>Schema Validation Error</h3>
+        <p>{schemaValidationError}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h3>Widget Preview</h3>
+      <div className="schema-preview">
+        <h4>{generatedSchema.metadata.name}</h4>
+        <p>{generatedSchema.metadata.description}</p>
+
+        {/* Show preview with sample data */}
+        {previewData ? (
+          <div className="widget-preview">
+            {/* Render widget with preview data */}
+            {previewData.map((item: any, index: number) => (
+              <div key={index}>{item.title}</div>
+            ))}
+          </div>
+        ) : (
+          <button onClick={handleLoadPreviewData}>Load Preview</button>
+        )}
+
+        {/* Deploy button (only enabled if schema is valid) */}
+        <button disabled={!canProgressToNextStage}>
+          Deploy Widget
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// STAGE 5: DEPLOYMENT
+// =============================================================================
+
+/**
+ * Example: Widget Deployment
+ *
+ * Deploys the widget to the dashboard and cleans up wizard state.
+ */
+export async function deployWidgetExample() {
+  const store = useConversationStore.getState();
+
+  const { generatedSchema, extractedIntent } = store;
+
+  if (!generatedSchema || !extractedIntent) {
+    console.error('Missing required data for deployment');
+    return;
+  }
+
+  // Set deploying state to show loading UI
+  store.setDeploying(true);
+
+  try {
+    // Call deployment API
+    const response = await fetch('/api/widgets/deploy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        schema: generatedSchema,
+        userIntent: extractedIntent,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Deployment failed');
+    }
+
+    const result = await response.json();
+    console.log('Widget deployed successfully:', result.widgetId);
+
+    // Reset wizard state for next widget creation
+    store.resetWizard();
+
+    // Navigate to dashboard or show success message
+    // window.location.href = '/dashboard';
+  } catch (error) {
+    console.error('Deployment error:', error);
+    // Show error message to user
+  } finally {
+    store.setDeploying(false);
+  }
+}
+
+// =============================================================================
+// STAGE TRANSITION LOGIC
+// =============================================================================
+
+/**
+ * Example: Complete Stage Transition Flow
+ *
+ * Shows how stages transition from 2 → 3 → 4 → 5
+ */
+export async function completeWizardFlowExample() {
+  const store = useConversationStore.getState();
+
+  // STAGE 2 → STAGE 3 transition
+  // When AI returns inferredWidget, automatically transition
+  if (store.stage === 'clarifying_questions' && store.inferredWidget) {
+    store.setStage('visualization');
+  }
+
+  // STAGE 3 → STAGE 4 transition
+  // When user selects visualization, generate schema and transition
+  if (store.stage === 'visualization' && store.selectedVisualization) {
+    await generateSchemaExample(); // Generates and validates schema
+    if (!store.schemaValidationError) {
+      store.setStage('preview');
+    }
+  }
+
+  // STAGE 4 → STAGE 5 transition
+  // When user confirms schema, transition to deploy
+  if (store.stage === 'preview' && store.canProgressToNextStage) {
+    store.setStage('deploy');
+    await deployWidgetExample();
+  }
+}
+
+// =============================================================================
+// PERSISTENCE TESTING
+// =============================================================================
+
+/**
+ * Example: Testing Persistence
+ *
+ * Demonstrates how state persists across page refreshes.
+ */
+export function testPersistenceExample() {
+  const store = useConversationStore.getState();
+
+  // Set some state
+  store.setVisualization('list');
+  store.setSchema({
+    metadata: {
+      name: 'Test Widget',
+      description: 'Test description',
+      category: 'test',
+      version: 1,
+    },
+    dataSource: {
+      provider: 'test',
+      endpoint: '/test',
+      method: 'GET',
+    },
+    fields: [
+      {
+        name: 'test',
+        path: '$.test',
+        type: 'string',
+      },
+    ],
+    layout: {
+      type: 'list',
+      fields: {
+        title: 'test',
+      },
+    },
+  });
+
+  console.log('State saved. Refresh the page and check localStorage:');
+  console.log('Key: conversation-wizard-storage');
+  console.log('Value:', localStorage.getItem('conversation-wizard-storage'));
+
+  // After page refresh, state will be restored automatically
+  // You can verify by checking store.selectedVisualization and store.generatedSchema
+}
+
+// =============================================================================
+// VALIDATION TESTING
+// =============================================================================
+
+/**
+ * Example: Schema Validation
+ *
+ * Shows how to validate schemas and handle errors.
+ */
+export function testValidationExample() {
+  const store = useConversationStore.getState();
+
+  // Test 1: Valid schema
+  const validSchema: UniversalWidgetDefinition = {
+    metadata: {
+      name: 'Valid Widget',
+      description: 'This should pass validation',
+      category: 'test',
+      version: 1,
+    },
+    dataSource: {
+      provider: 'github',
+      endpoint: '/repos',
+      method: 'GET',
+    },
+    fields: [
+      {
+        name: 'name',
+        path: '$.name',
+        type: 'string',
+      },
+    ],
+    layout: {
+      type: 'list',
+      fields: {
+        title: 'name',
+      },
+    },
+  };
+
+  const result1 = store.validateSchema(validSchema);
+  console.log('Valid schema test:', result1); // { valid: true }
+
+  // Test 2: Invalid schema (missing required fields)
+  const invalidSchema = {
+    metadata: {
+      name: 'Invalid Widget',
+      // Missing description
+    },
+    // Missing dataSource
+    fields: [],
+    layout: {
+      type: 'list',
+      // Missing fields.title
+    },
+  };
+
+  const result2 = store.validateSchema(invalidSchema);
+  console.log('Invalid schema test:', result2);
+  // { valid: false, error: "dataSource.provider is required, dataSource.endpoint is required, ..." }
+}
