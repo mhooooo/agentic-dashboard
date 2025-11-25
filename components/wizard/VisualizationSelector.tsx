@@ -126,7 +126,7 @@ export function VisualizationSelector({
       </div>
 
       {/* Visualization Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         {visualizationTypes.map((viz) => {
           const isRecommended = viz.type === recommendedType;
           const isSelected = viz.type === selectedType;
@@ -178,8 +178,8 @@ function VisualizationCard({
     <button
       onClick={onSelect}
       className={cn(
-        'relative group w-full text-left rounded-lg border-2 p-4 transition-all duration-200',
-        'hover:shadow-md hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+        'relative group w-full text-left rounded-lg border-2 p-3 md:p-4 transition-all duration-200 cursor-pointer',
+        'hover:shadow-md hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
         isSelected
           ? 'border-primary bg-primary/5 shadow-md'
           : 'border-border bg-background hover:border-primary/50'
@@ -187,9 +187,9 @@ function VisualizationCard({
     >
       {/* Recommended Badge */}
       {isRecommended && (
-        <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
+        <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-[10px] md:text-xs font-medium px-2 py-1 rounded-full shadow-sm flex items-center gap-1">
           <SparklesIcon className="w-3 h-3" />
-          Recommended
+          <span className="whitespace-nowrap">Recommended</span>
         </div>
       )}
 
@@ -206,19 +206,19 @@ function VisualizationCard({
         <div className="flex items-center gap-3">
           <div
             className={cn(
-              'w-10 h-10 rounded-md flex items-center justify-center transition-colors',
+              'w-8 h-8 md:w-10 md:h-10 rounded-md flex items-center justify-center transition-colors',
               isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground group-hover:bg-primary/10'
             )}
           >
-            <Icon className="w-5 h-5" />
+            <Icon className="w-4 h-4 md:w-5 md:h-5" />
           </div>
-          <h4 className="text-base font-semibold text-foreground">
+          <h4 className="text-sm md:text-base font-semibold text-foreground">
             {visualization.name}
           </h4>
         </div>
 
         {/* Description */}
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-xs md:text-sm text-muted-foreground leading-relaxed line-clamp-2 md:line-clamp-3">
           {visualization.description}
         </p>
 
@@ -259,7 +259,7 @@ interface VisualizationThumbnailProps {
 
 function VisualizationThumbnail({ type }: VisualizationThumbnailProps) {
   return (
-    <div className="bg-muted/50 rounded-md p-3 h-24 flex items-center justify-center">
+    <div className="bg-muted/50 rounded-md p-2 md:p-3 h-20 md:h-24 flex items-center justify-center">
       {type === 'list' && <ListThumbnail />}
       {type === 'table' && <TableThumbnail />}
       {type === 'cards' && <CardsThumbnail />}

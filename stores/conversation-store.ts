@@ -122,6 +122,7 @@ interface ConversationStore {
 
   // Helper actions
   progressToNextStage: () => void;
+  goToPreviousStage: () => void;
   getMessagesForStage: (stage: WizardStage) => ConversationMessage[];
 }
 
@@ -143,23 +144,38 @@ const createInitialState = () => ({
 });
 
 /**
+ * Stage order for wizard flow
+ */
+const STAGE_ORDER: WizardStage[] = [
+  'problem_discovery',
+  'clarifying_questions',
+  'visualization',
+  'preview',
+  'deploy',
+];
+
+/**
  * Get next stage in the wizard flow
  */
 function getNextStage(currentStage: WizardStage): WizardStage | null {
-  const stageOrder: WizardStage[] = [
-    'problem_discovery',
-    'clarifying_questions',
-    'visualization',
-    'preview',
-    'deploy',
-  ];
-
-  const currentIndex = stageOrder.indexOf(currentStage);
-  if (currentIndex === -1 || currentIndex === stageOrder.length - 1) {
+  const currentIndex = STAGE_ORDER.indexOf(currentStage);
+  if (currentIndex === -1 || currentIndex === STAGE_ORDER.length - 1) {
     return null; // No next stage
   }
 
-  return stageOrder[currentIndex + 1];
+  return STAGE_ORDER[currentIndex + 1];
+}
+
+/**
+ * Get previous stage in the wizard flow
+ */
+function getPreviousStage(currentStage: WizardStage): WizardStage | null {
+  const currentIndex = STAGE_ORDER.indexOf(currentStage);
+  if (currentIndex === -1 || currentIndex === 0) {
+    return null; // No previous stage
+  }
+
+  return STAGE_ORDER[currentIndex - 1];
 }
 
 /**
@@ -508,6 +524,61 @@ export const useConversationStore = create<ConversationStore>()(
           );
 
           console.log('[ConversationStore] Wizard completed');
+        }
+      },
+
+      /**
+       * Go to the previous stage in the wizard
+       *
+       * Navigates back one stage while preserving conversation state.
+       * Does NOT clear messages or inferred data - allows user to edit previous answers.
+       * Stage 1 (problem_discovery) cannot go back.
+       */
+      goToPreviousStage: () => {
+        const state = get();
+        const previousStage = getPreviousStage(state.stage);
+
+        if (previousStage) {
+          // Reset stage-specific state when going back
+          const updates: Partial<ConversationStore> = {
+            stage: previousStage,
+          };
+
+          // Clear stage-specific data when going back
+          if (state.stage === 'visualization') {
+            // Going back from visualization to clarifying_questions
+            // Keep messages and inferredWidget so user can re-answer questions
+          } else if (state.stage === 'preview') {
+            // Going back from preview to visualization
+            updates.schemaValidationError = null;
+            updates.previewData = null;
+          } else if (state.stage === 'deploy') {
+            // Going back from deploy to preview
+            // Keep schema so user can review again
+          }
+
+          set(updates);
+
+          // Publish back navigation event
+          const eventMesh = useEventMesh.getState();
+          eventMesh.publish(
+            'wizard.stage.back',
+            {
+              fromStage: state.stage,
+              toStage: previousStage,
+              timestamp: new Date().toISOString(),
+            },
+            'conversation-store'
+          );
+
+          console.log(
+            `[ConversationStore] Back navigation: ${state.stage} → ${previousStage}`
+          );
+        } else {
+          console.warn(
+            '[ConversationStore] Cannot go back - already at first stage:',
+            state.stage
+          );
         }
       },
 

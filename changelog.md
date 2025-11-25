@@ -4,6 +4,154 @@ All notable changes, bugs, and fixes to the Agentic Dashboard project.
 
 ---
 
+## 2025-11-25 - Mobile Responsive Wizard UI Complete (Month 5 Finale)
+
+### Summary
+Completed 3 mobile responsive tasks via parallel sub-agent orchestration. Wired up real Stage 3-4 components, made WidgetPreview fully responsive, and polished VisualizationSelector for mobile. Wizard now fully usable on iPhone SE (375px) through desktop (1024px+).
+
+### Task 1: Wire Up Real Stage 3-4 Components ✅
+- **Modified:** `components/WidgetCreationWizard.tsx`
+- **Added imports:**
+  ```typescript
+  import { VisualizationSelector } from '@/components/wizard/VisualizationSelector';
+  import { WidgetPreview } from '@/components/wizard/WidgetPreview';
+  ```
+- **Replaced:** `VisualizationSelectorPlaceholder` → real `VisualizationSelector`
+- **Replaced:** `WidgetPreviewPlaceholder` → real `WidgetPreview`
+- **Added:** `generateInitialSchema()` helper for schema generation on visualization select
+- **Impact:** Real components now render in wizard instead of placeholders
+
+### Task 2: Mobile Responsive WidgetPreview ✅
+- **Modified:** `components/wizard/WidgetPreview.tsx`
+- **Key changes:**
+  | Element | Before | After |
+  |---------|--------|-------|
+  | Main grid | `grid-cols-2` | `grid-cols-1 lg:grid-cols-2` |
+  | Grid gap | `gap-6` | `gap-4 lg:gap-6` |
+  | Modal width | `max-w-4xl` | `max-w-full lg:max-w-4xl` |
+  | Modal height | `h-[80vh]` | `h-[95vh] lg:h-[80vh]` |
+  | Textarea | `text-sm` | `text-xs lg:text-sm` |
+  | All buttons | - | `min-h-[44px]` (touch target) |
+  | Button layout | horizontal | `flex-col sm:flex-row` |
+- **Impact:** Panels stack on mobile, modal fills screen on phone
+
+### Task 3: Mobile Polish VisualizationSelector ✅
+- **Modified:** `components/wizard/VisualizationSelector.tsx`
+- **Key changes:**
+  | Element | Before | After |
+  |---------|--------|-------|
+  | Grid gap | `gap-4` | `gap-3 md:gap-4` |
+  | Card padding | `p-4` | `p-3 md:p-4` |
+  | Icon container | `w-10 h-10` | `w-8 h-8 md:w-10 md:h-10` |
+  | Thumbnail | `h-24` | `h-20 md:h-24` |
+  | Badge text | `text-xs` | `text-[10px] md:text-xs` |
+  | Card titles | `text-base` | `text-sm md:text-base` |
+  | Descriptions | `text-sm` | `text-xs md:text-sm line-clamp-2 md:line-clamp-3` |
+- **Added:** `active:scale-[0.98]` for touch feedback
+- **Impact:** Cards are thumb-friendly, readable on small screens
+
+### Responsive Breakpoints
+- **375px (mobile):** Single column, stacked panels, 95vh modal, smaller text
+- **768px (tablet):** 2-column grids where applicable, larger text
+- **1024px+ (desktop):** Full side-by-side layout, centered modals
+
+### Touch Target Compliance
+All interactive elements meet WCAG 2.1 Level AAA (44x44px minimum):
+- ✅ All buttons: `min-h-[44px]`
+- ✅ Visualization cards: Full card clickable
+- ✅ Modal controls: Proper sizing
+
+### Build Verification
+- **TypeScript:** 0 errors in production code
+- **Test files:** Pre-existing errors (Jest types) - unrelated
+
+---
+
+## 2025-11-25 - Month 5 Week 20 Polish & Domain Expansion Complete
+
+### Summary
+Completed 5 sprint tasks via parallel sub-agent orchestration. Added back navigation, deploy retry enhancements, Stripe + Twilio provider registration, and AI prompt updates. Most features were already implemented in prior weeks - this sprint focused on polishing and domain expansion.
+
+### Task 1: Stage 5 Deploy Success UX ✅
+- **Status:** Already implemented in Week 19
+- **Fix:** Changed navigation route from `/dashboard` to `/` (line 432)
+- **Features already working:**
+  - Confetti animation on mount (canvas-confetti)
+  - "View Dashboard" button with navigation
+  - "Create Another Widget" button with state reset
+  - Widget name displayed in success message
+- **Why:** Route was incorrect - main dashboard is at root path
+
+### Task 2: Back Navigation with State Preservation ✅
+- **Modified:** `components/WidgetCreationWizard.tsx`
+- **Added:** Back button to wizard header (lines 465-476)
+  ```tsx
+  {canGoBack && (
+    <button onClick={handleBack} disabled={isLoading || isDeploying}>
+      ← Back
+    </button>
+  )}
+  ```
+- **Added:** `canGoBack` variable (line 454) - visible on stages 2-5, not stage 1 or deploy
+- **Why:** Users needed ability to go back and edit previous answers
+- **Impact:** Preserves problem, clarifying answers, visualization choice when navigating back
+
+### Task 3: Deploy Retry Mechanism ✅
+- **Status:** Already implemented in prior weeks
+- **Fix:** Added `setDeployRetryCount(0)` on successful deploy (line 402)
+- **Features already working:**
+  - Error banner with red/warning styling
+  - "Retry" button with counter ("Retry", "Retry (1)", "Retry (2)")
+  - Error message display from API response
+  - Auto-clear error before retry
+- **Why:** Counter wasn't resetting on success, causing stale counts
+
+### Task 4: Register Stripe + Twilio Providers ✅
+- **Modified:** `lib/providers/registry.ts` (+4 lines)
+  ```typescript
+  import { stripeAdapter } from './stripe';
+  import { twilioAdapter } from './twilio';
+  // ...
+  ['stripe', stripeAdapter],
+  ['twilio', twilioAdapter],
+  ```
+- **Verified:** `lib/providers/types.ts` already has 'stripe' | 'twilio' in ProviderName
+- **Verified:** `supabase/migrations/006_add_twilio_stripe_providers.sql` exists
+- **Why:** Adapters existed but weren't registered in the provider system
+- **Impact:** `getProvider('stripe')` and `getProvider('twilio')` now return valid adapters
+
+### Task 5: Update AI Prompt for Stripe/Twilio ✅
+- **Modified:** `lib/ai/widget-creation-agent.ts` (~70 lines)
+- **Added:** Updated ProviderName type (line 25)
+- **Added:** Provider descriptions for Stripe and Twilio (lines 87-88)
+- **Added:** Problem → Widget mapping examples (lines 96-99):
+  - "Track customer payments" → stripe/payment-list
+  - "Monitor subscription revenue" → stripe/revenue-metrics
+  - "Send SMS alerts" → twilio/sms-alerts
+  - "Text message notifications" → twilio/message-notifications
+- **Added:** 4 few-shot learning examples (lines 239-302) with full extractedIntent
+- **Created:** Test script `scripts/test-stripe-twilio-mapping.ts`
+- **Why:** AI needed examples to map payment/SMS problems to correct providers
+- **Impact:** AI now suggests 'stripe' for "I need to track customer payments"
+
+### Build Verification
+- **TypeScript:** 0 errors in production code
+- **Test files:** Pre-existing type errors (Jest definitions) - not related to this work
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `components/WidgetCreationWizard.tsx` | +14 lines (back button, route fix, counter reset) |
+| `lib/providers/registry.ts` | +4 lines (imports + registrations) |
+| `lib/ai/widget-creation-agent.ts` | ~70 lines (type, descriptions, examples) |
+
+### Lessons Learned
+- **Parallel sub-agents work well:** 5 agents completed in ~3 minutes vs sequential ~15 minutes
+- **Prior work was thorough:** Most UI features (confetti, retry, success screen) were already complete
+- **Provider registration is minimal:** Just 4 lines to add new providers when adapters exist
+
+---
+
 ## 2025-12-21 - Month 5 Week 19 Visualization UI Complete
 
 ### Summary

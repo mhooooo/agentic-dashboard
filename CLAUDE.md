@@ -39,10 +39,10 @@
 - **Trade-off:** Less flexibility than custom backend, but 90% faster to ship. Dev mode uses in-memory storage with global variable pattern for hot-reload persistence.
 - **When to revisit:** If need custom features Supabase doesn't support, or pricing becomes prohibitive at scale.
 
-### Next.js 15 App Router + Vercel
-- **Choice:** Next.js 15 with App Router, deployed on Vercel
+### Next.js 16 App Router + Vercel
+- **Choice:** Next.js 16 with App Router, deployed on Vercel
 - **Why:** Server Components reduce bundle size, API routes provide secure backend proxy, zero-config Vercel deployment.
-- **Trade-off:** Coupled to Vercel ecosystem, but deployment speed is worth it.
+- **Trade-off:** Coupled to Vercel ecosystem, but deployment speed is worth it. Turbopack bundling is aggressive - code must be defensive about browser/Node.js differences.
 - **When to revisit:** If need more infrastructure control or costs exceed self-hosted alternatives.
 
 ### OAuth 2.0 as Primary Auth (Nov 20, 2025)
@@ -97,6 +97,20 @@
 - ✅ Adoption: 5 providers using declarative factory (GitHub, Jira, Linear, Slack, Calendar)
 - ✅ Security: Zero incidents from generated widgets
 - ✅ GraphQL support: Works without modifications (Linear provider validated)
+
+**Month 4: AI Agent & Hardening** ✅
+- ✅ Token Expiry Warning System (real-time countdown badges, warning cards)
+- ✅ Production Documentation (6,800+ lines)
+- ✅ OAuth E2E Testing Plan (5 test suites, 40+ verification items)
+- ✅ Supabase Authentication + Real-time Subscriptions
+- ✅ Decision: Guided wizard approach for AI agent
+
+**Month 5 Weeks 17-19: Universal Orchestration Foundation** ✅
+- ✅ Claude API client: 5/5 tests passing (streaming, structured outputs)
+- ✅ Event Mesh V2: 6/6 tests passing (graph traversal, userIntent capture)
+- ✅ Problem-first wizard: 100% accuracy (5/5 providers, 96% avg confidence)
+- ✅ Visualization UI: Stage 3-4 components (~4,110 lines)
+- ✅ Build passes with 0 TypeScript errors
 
 ---
 
@@ -157,20 +171,25 @@ This month marks a fundamental shift in positioning. We're no longer building ju
 5. **Self-Documentation Magic** - "Build feature → 5 min later → shareable content." Twitter threads only for MVP. Knowledge graph builder with simple ID matching. Journalist Agent converts event history to narrative.
 
 **Pending Decisions:**
-- ~~**Token Refresh Strategy:** Build proactive background job now OR reactive "refresh on 401" approach?~~ ✅ **RESOLVED:** Built proactive background job (Nov 20, 2025). Refreshes tokens 15 minutes before expiry. Prevents user-facing errors and widget downtime.
-- ~~**Conversational Agent Scope:** Full natural language ("I need X") OR guided multi-step wizard?~~ ✅ **RESOLVED:** Problem-first guided wizard (Nov 24, 2025). Starts with problem discovery, AI suggests solutions. Lower risk than full NL, better validation.
-- **Action Confirmation UX:** For workflows that take actions (charge Stripe, send SMS), require per-action confirmation OR one-time workflow approval? Lean toward per-action until we build user trust.
+- **Action Confirmation UX:** For workflows that take actions (charge Stripe, send SMS), require per-action confirmation OR one-time workflow approval? Lean toward per-action until we build user trust. (Relevant for Week 20 Stripe/Twilio integration)
 - **Event Mesh Scaling:** Current Zustand pub/sub is in-memory (lost on page refresh). Need persistent event log for "explain what happened" debugging. Use Supabase real-time OR build custom event store? Defer until Month 6 unless becomes blocking.
 
-**Status:**
-- Month 5 Week 17 complete (Dec 1-7, 2025) - Foundation Ready! ✅
-- Claude API client: 5/5 tests passing (streaming, structured outputs, conversation)
-- Event Mesh V2: 6/6 tests passing (graph traversal, userIntent capture)
-- Problem-first wizard: 80% accuracy (exceeds 70% target)
-- Conversation state: Zustand store with 5-stage wizard flow
-- Wizard UI: Chat interface at /test-wizard
-- Build passes with 0 TypeScript errors (22 routes generated)
-- Ready for Week 18 backend integration
+**Resolved Decisions (archived):**
+- ✅ Token Refresh: Proactive background job (15 min before expiry) - Nov 20
+- ✅ Conversational Agent: Problem-first guided wizard - Nov 24
+
+**Status: Week 20 Active (Dec 22-28, 2025)**
+- Week 17-19 complete ✅ - Foundation + Backend + Visualization UI all shipped
+- Problem-first wizard: 100% accuracy (5/5 providers, 96% avg confidence)
+- All tests passing, 0 TypeScript errors
+- Ready for Week 20 polish and domain expansion
+
+**Week 20 Priorities:**
+1. **Stage 5 Polish** - Deploy flow completion, success state, dashboard navigation
+2. **Error Recovery** - Back navigation preserves state, edit previous answers, retry mechanisms
+3. **Mobile Responsive** - Wizard UI polish for tablet/mobile
+4. **Domain Expansion** - Stripe + Twilio providers (proves universal orchestration)
+5. **User Testing** - End-to-end testing with real users
 
 **Reference Documents:**
 - **RFC-001:** `/docs/rfcs/RFC-001-MONTH-5-UNIVERSAL-ORCHESTRATION.md` (complete design)
@@ -207,97 +226,81 @@ This month marks a fundamental shift in positioning. We're no longer building ju
 
 ## Anti-Patterns & Lessons
 
-### Architecture Decisions
+### Architecture & Design Patterns
 
-**2025-11-13:** Initially considered building conversational agent (Claude API) in Month 1, deferred to Month 4. **Lesson:** Event Mesh is the differentiator, not conversation. Prove magic first, add conversation later.
+**Defer complexity, prove magic first:**
+- (Nov 13) Deferred conversational agent to Month 4, code generation indefinitely. Event Mesh is the differentiator, not conversation. Declarative JSON covers 80% of cases with 0% security risk.
+- (Nov 19) JSONPath (`$.user.login`) + template strings (`"{{firstName}} {{lastName}}"`) beat code generation. Simple schema wins for maintainability.
 
-**2025-11-13:** Almost built code generation in Month 1. **Lesson:** Declarative JSON factory covers 80% of cases with 0% security risk. Defer dangerous features until proven necessary.
+**ProviderAdapter pattern is wildly successful:**
+- (Nov 19) Added 3 providers (Linear, Slack, Calendar) in 75 minutes. GraphQL works seamlessly. Token format validation (`ghp_`, `lin_api_`, `xoxb-`, `ya29.`) catches errors early. Error format standardization across different API styles (status codes vs `ok: false` vs nested errors).
 
-**2025-11-19:** Built UniversalDataWidget with JSONPath and template strings instead of code generation. **Lesson:** JSONPath (`$.user.login`) + template strings (`"{{firstName}} {{lastName}}"`) cover 80% of data transformation needs with 0% security risk. Simple schema beats complex code generation for maintainability.
-
-**2025-11-19:** Expanded widget library with Linear, Slack, and Calendar providers (3 new providers + 3 JSON widgets in ~75 minutes). **Lesson:** The ProviderAdapter pattern is **wildly successful**. Key insights:
-- **GraphQL support works seamlessly**: Linear uses GraphQL instead of REST. The adapter pattern handled it without modifications.
-- **Token format validation catches errors early**: Each provider has unique token formats (GitHub: `ghp_`, Linear: `lin_api_`, Slack: `xoxb-`, Google: `ya29.`). Adding validation prevents confusing API errors.
-- **Error format standardization is critical**: GitHub uses status codes, Slack uses `ok: false`, Google nests errors in `error.message`. The adapter pattern unified these.
-- **"Hours not days" promise validated**: Added 3 complete providers (adapters + widgets + tests) in 75 minutes.
-
-**2025-11-20:** Built OAuth Token Refresh System with 15-minute warning window. **Lesson:** The OAuth callback already stores `expires_at` in the credentials JSONB field—no database migration needed! Key insights:
-- **Leverage existing data**: Check what's already being stored before adding new columns. The OAuth callback was calculating and storing expiry timestamps all along.
-- **JSONB flexibility pays off**: Storing credentials in JSONB (not rigid columns) meant adding `refresh_token` and `expires_at` required zero schema changes. This is exactly why we chose JSONB in Month 3.
-- **15-minute window is optimal**: Balances refresh frequency (not too aggressive) vs. risk of expiration (not too close to the wire). Tested with 1-hour tokens (Jira) and 24-hour tokens (Linear).
-- **Server-side refresh job beats client-side**: Could have done "refresh on 401" client-side, but proactive server-side prevents users from ever seeing errors. Better UX, slightly more infrastructure complexity (worth it).
+**Problem-first AI validated:**
+- (Dec 7-21) AI achieved 100% accuracy (5/5 providers, 96% avg confidence) mapping problems → widgets. Confidence scoring enables asking clarifying questions when uncertain (30% confidence) instead of guessing wrong.
 
 ### OAuth & Security
 
-**2025-11-20:** Implemented OAuth 2.0 for all 5 providers. **Lesson:** OAuth provides 4x better UX (~30sec vs ~2min), but requires understanding the "contract problem" between flexible JavaScript code and strict SQL databases. Hit 3 classic errors:
-- **The Bouncer Problem (CHECK constraint)**: Database rejects new providers not in allowed list. **Fix:** Update database constraints FIRST before deploying code.
-- **The Double-Insert Problem (duplicate key)**: Using INSERT fails on second save. **Fix:** Use UPSERT (PostgREST `Prefer: resolution=merge-duplicates` or PATCH fallback).
-- **The OAuth Token Problem (validation)**: Manual PATs have prefixes (`lin_api_`), OAuth tokens don't. **Fix:** Accept both formats in validation - check prefix OR length > 32.
+**Database is a strict gatekeeper (Nov 20):**
+- **The Bouncer Problem**: CHECK constraints reject unknown providers. **Fix:** Update DB schema FIRST.
+- **The Double-Insert Problem**: INSERT fails on second save. **Fix:** Use UPSERT.
+- **The OAuth Token Problem**: Manual PATs have prefixes, OAuth tokens don't. **Fix:** Accept both formats.
+- **Order matters:** (1) Update DB schema → (2) Deploy code → (3) Users connect.
 
-**Key insight:** Database is a strict gatekeeper. The right order is: (1) Update DB schema, (2) Deploy code, (3) Users connect. NOT: (1) Deploy code, (2) Users hit errors, (3) Fix DB.
+**Modern OAuth requires layers (Nov 20):** PKCE prevents code interception, state prevents CSRF, httpOnly cookies prevent XSS, refresh tokens handle expiration. Don't skip security to ship faster. Server-side proactive refresh (15 min before expiry) beats client-side "refresh on 401."
 
-**2025-11-20:** OAuth security implementation: PKCE for GitHub/Linear, CSRF protection via state parameters, httpOnly cookies, refresh token support for Jira/Linear/Slack/Google. **Lesson:** Modern OAuth requires multiple layers: PKCE prevents authorization code interception, state prevents CSRF, httpOnly cookies prevent XSS, refresh tokens handle expiration. Don't skip security features to ship faster.
+### JavaScript/TypeScript Gotchas
 
-### Implementation Gotchas
-
-**2025-11-14:** Completed Month 1 with mock data only. **Lesson:** Mock data sufficient for POC. Real API integration can wait - validates the interconnection thesis faster.
-
-**2025-11-19:** Event Mesh magic now works with **real data** from GitHub/Jira APIs. **Lesson:** The core differentiator (widget interconnection) scales to production. Click PR #1 → Jira auto-filters to SCRUM-5, all with live API data. This proves the thesis beyond POC.
-
-**2025-11-19:** Supabase connection fixed by resolving environment variable override issue. **Lesson:** System environment variables always override `.env.local` in Next.js. When env vars seem wrong despite correct `.env.local`, check `printenv` for conflicting system-level variables. Created `dev.sh` script to unset problematic env vars before starting dev server.
-
-**2025-11-19:** Built Backend API Proxy with dev mode fallback when Supabase fails. **Lesson:** In-memory storage with global variables for hot-reload persistence is acceptable for MVP. Ship working solution before fighting infrastructure. Global variable pattern prevents Next.js hot-reload data loss:
+**The `||` vs `??` bug (CRITICAL - Nov 20):**
 ```typescript
-const devCredentialsStore = global.devCredentialsStore ?? new Map();
+// WRONG: 0 is falsy → evaluates to Infinity
+y: widget.layout?.y || Infinity
+
+// CORRECT: only null/undefined replaced
+y: widget.layout?.y ?? Infinity
+```
+When 0 is valid, NEVER use `||`. This cost 30+ minutes - positions saved correctly but loaded wrong.
+
+**`global` vs `globalThis` (Dec 21):** `global` is Node.js-only, crashes browser with "global is not defined." Always use `globalThis` for cross-environment code. Turbopack bundles lib/ files for client even if only server imports them.
+
+**Next.js 15+ params are Promises (Nov 20):**
+```typescript
+// Must await params in dynamic routes
+const { widgetId } = await params;
+```
+TypeScript won't catch this - it's a runtime error.
+
+### Environment & Build
+
+**Env var loading (Nov 19, Dec 7):**
+- System env vars override `.env.local`. Check `printenv` for conflicts.
+- Node.js scripts don't auto-load `.env.local`. Use: `ANTHROPIC_API_KEY=... npx tsx test.ts`
+
+**Dev mode fallback pattern (Nov 19):**
+```typescript
+const devCredentialsStore = globalThis.devCredentialsStore ?? new Map();
 if (process.env.NODE_ENV === 'development') {
-  global.devCredentialsStore = devCredentialsStore;
+  globalThis.devCredentialsStore = devCredentialsStore;
 }
 ```
+Global variable pattern prevents hot-reload data loss.
 
-**2025-11-20 (CRITICAL):** Next.js 15 dynamic route params are now Promises. Must `await params` before destructuring: `const { widgetId } = await params;`. **Lesson:** TypeScript won't catch this - it's a runtime error. Affects all dynamic routes (`[param]`).
+**Build validation is non-negotiable:** Fix all TypeScript errors BEFORE deployment. Zero-error builds prevent production surprises.
 
-**2025-11-20:** Built complete production infrastructure (Vercel Cron, Supabase Auth, Real-time Subscriptions). **Lesson:** Maintain dev mode bypass even when adding production features. Key insights:
-- **Dev mode flexibility**: Middleware checks `NODE_ENV === 'development'` to skip auth, real-time hooks gracefully skip when Supabase not configured. This maintains fast local iteration.
-- **TypeScript strictness**: When adding real-time subscriptions, hit type errors with `apikey: string | undefined` in headers. **Fix:** Use conditional spread: `...(serviceKey ? { 'apikey': serviceKey } : {})` instead of `'apikey': serviceKey`.
-- **Middleware deprecation (Next.js 16)**: Got warning: "middleware" file convention deprecated, use "proxy" instead. Not blocking, but plan to migrate when Next.js 16 stabilizes.
-- **Build validation is critical**: Fixed 7 TypeScript errors before declaring "done". Zero-error builds prevent production surprises.
+### AI Integration Patterns (Dec 14-21)
 
-**2025-11-24:** Completed Month 4 using parallel sub-agent orchestration (6 tasks via Intern agent). **Lesson:** For large sprints, use orchestrator pattern - delegate each task to isolated sub-agents instead of executing linearly in main context. Key insights:
-- **Context efficiency**: Main agent stays clean, sub-agents handle deep dives (infrastructure, UI, testing, docs). Each completes independently and reports back.
-- **Parallel execution**: All 6 tasks explored simultaneously. No waiting for Task 1 to finish before starting Task 2.
-- **Production documentation is non-negotiable**: Created 6,800+ lines of docs (deployment guide, OAuth troubleshooting, known issues). This prevented "tribal knowledge" problem and enables future developers to onboard quickly.
-- **Real-time UX patterns**: Token expiry UI uses countdown timers (updates every second) and visual states (OK → Warning → Expired). Users see "Token expires in 5m" not "Token expires at 2025-11-24T15:30:00Z".
-- **Build-first deployment**: Fixed all TypeScript errors BEFORE writing deployment docs. Can't document a broken build.
+**SSE streaming for chat:** JSON response for Stage 1 (needs parsing), SSE streaming for Stages 2-5 (typewriter effect). Pattern: `data: {"text": "chunk"}\n\n` with `data: {"done": true}\n\n`.
 
-**2025-12-07:** Completed Month 5 Week 17 using parallel sub-agent orchestration (5 tasks, all 5 agents launched simultaneously). **Lesson:** Orchestrator pattern scales to even larger sprints. This time delivered ~5,090 lines of code across 21 files with 0 TypeScript errors. Key insights:
-- **Test-driven validation**: All 5 sub-agents included comprehensive test suites in deliverables. Claude API (5/5 passing), Event Mesh V2 (6/6 passing), Widget inference (80% accuracy). Tests validate correctness before integration.
-- **Environment variable loading gotcha**: Node.js scripts don't auto-load `.env.local` like Next.js does. Must pass `ANTHROPIC_API_KEY` as environment variable: `ANTHROPIC_API_KEY=... npx tsx test.ts`. Alternative: install `dotenv` package.
-- **Problem-first approach validated**: AI achieved 80% accuracy mapping natural language problems → widget solutions (exceeds 70% target). The "failures" were actually correct: (1) Stripe not implemented yet (AI correctly said "unsupported"), (2) Calendar test expected wrong provider name.
-- **Graph traversal enables workflows**: Event Mesh V2 persistence with `relatedEvents` field enables reconstructing entire workflows by following event chains. This is critical for Glass Factory self-documentation.
-- **Confidence scoring works**: AI returned 85-95% confidence for correct matches, 30% for unknown providers. This enables asking clarifying questions when uncertain instead of guessing wrong.
+**Provider name consistency:** AI prompt examples MUST match database enum values exactly. "Google Calendar" in prompt vs "calendar" in DB = broken. Test E2E before deployment.
 
-**2025-12-14:** Completed Month 5 Week 18 using parallel sub-agent orchestration (5 tasks, all 5 agents launched simultaneously). **Lesson:** Backend integration validated the Week 17 foundation - zero breaking changes needed. Delivered ~2,000+ lines across API routes, UI updates, tests, and docs. Key insights:
-- **SSE streaming pattern**: For AI chat, use JSON response for Stage 1 (needs structured parsing) and SSE streaming for Stages 2-5 (typewriter effect). Pattern: `data: {"text": "chunk"}\n\n` with `data: {"done": true}\n\n` to signal end.
-- **Provider name consistency is critical**: AI prompt said "Google Calendar" but DB constraint expects "calendar". **Fix:** Ensure AI prompt examples match database enum values exactly. Test with E2E suite before deployment.
-- **100% accuracy achieved**: E2E testing showed 100% accuracy (5/5 providers) with 96% average confidence. The Week 17 problem-first prompt is working exceptionally well. Key: Examples in AI prompt must be precise and match internal naming conventions.
-- **Streaming in React**: Use `ReadableStream.getReader()` with `TextDecoder` to parse SSE chunks. Handle partial lines (buffer until `\n\n`). Always include `AbortController` for cleanup on unmount.
-- **Error handling UX**: Display error banner above input (not modal), include retry button with counter ("Retry (1)", "Retry (2)"), show stage-specific loading messages ("Understanding your problem..." not generic "Loading...").
+**Streaming in React:** `ReadableStream.getReader()` + `TextDecoder`. Buffer partial lines until `\n\n`. Always include `AbortController` for cleanup.
 
-**2025-12-21:** Completed Month 5 Week 19 using parallel sub-agent orchestration (5 tasks, all 5 agents launched simultaneously). **Lesson:** Visualization UI builds on stable foundation. Delivered ~4,110 lines across components, store extensions, tests, and docs. Key insights:
-- **`global` vs `globalThis`**: `global` is Node.js-only, crashes in browser with "global is not defined". **Fix:** Always use `globalThis` which works in both environments. For TypeScript type narrowing, wrap in helper function.
-- **Turbopack bundles aggressively**: Next.js 16 Turbopack bundles lib/ files for client even if only server components import them. Code that touches `global` must be defensive.
-- **localStorage persistence works**: Zustand `persist` middleware with localStorage enables wizard state survival across page refresh. Users don't lose progress on accidental refresh.
-- **Visual feedback matters**: Visualization selector with SVG thumbnails + AI recommendation badge provides intuitive UX. Users understand options without reading descriptions.
-- **Schema validation in UI**: Catching JSON errors before deploy prevents frustrating API failures. Validate early, show specific error messages.
+### Sub-Agent Orchestration (Nov 24 - Dec 21)
 
-### Specific Bug Fixes
+**Pattern validated across 4 sprints:** Delegate tasks to isolated sub-agents instead of linear execution. All tasks explore simultaneously. Main agent stays clean.
 
-**2025-11-20:** Widget layout persistence hit THREE critical bugs before working:
-1. **Layout not saving**: `handleLayoutChange` only updated React state, never saved to database. **Fix:** Added debounced PATCH calls with 1-second delay to avoid API spam during dragging.
-2. **Welcome widget auto-injection**: Loading logic always re-added welcome widget if not in DB, overriding user deletions. **Fix:** Database is now source of truth - only show welcome if 0 widgets in DB (first-time users).
-3. **Falsy value bug (THE KILLER)**: Used `||` operator for defaults: `y: widget.layout?.y || Infinity`. When `y: 0` (top row), JavaScript treats 0 as falsy, so expression evaluated to `Infinity`, moving all top-row widgets to bottom. **Fix:** Use nullish coalescing `??` operator instead: `y: widget.layout?.y ?? Infinity`. Only replaces `null`/`undefined`, preserves `0`.
+**Test-driven validation:** All sub-agents include test suites. Tests validate correctness before integration.
 
-**Critical lesson:** When 0 is a valid value, NEVER use `||` for defaults. Use `??` (nullish coalescing) or explicit `=== null || === undefined` checks. This bug cost 30+ minutes because positions WERE saving correctly, but loading incorrectly. The `||` vs `??` distinction is not obvious - always think "is 0 a valid value here?"
+**Production docs are non-negotiable:** 6,800+ lines prevents "tribal knowledge" problem.
 
 ---
 
@@ -312,5 +315,5 @@ if (process.env.NODE_ENV === 'development') {
 
 ---
 
-**Last Updated:** December 21, 2025 (Month 5 Week 19 Complete)
-**Next Decision Point:** Week 20 polish (Dec 22-28). Focus: Stage 5 deploy success UX, error recovery, mobile responsive, user testing.
+**Last Updated:** November 25, 2025 (ContextKeeper grooming - Week 20 active)
+**Next Decision Point:** Week 20 (Dec 22-28) - Action Confirmation UX decision needed before Stripe/Twilio integration.
