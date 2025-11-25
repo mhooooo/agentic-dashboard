@@ -11,6 +11,8 @@ import { jiraAdapter } from './jira';
 import { linearAdapter } from './linear';
 import { slackAdapter } from './slack';
 import { calendarAdapter } from './calendar';
+import { stripeAdapter } from './stripe';
+import { twilioAdapter } from './twilio';
 
 /**
  * Provider adapter registry
@@ -21,6 +23,8 @@ const providers = new Map<ProviderName, ProviderAdapter>([
   ['linear', linearAdapter],
   ['slack', slackAdapter],
   ['calendar', calendarAdapter],
+  ['stripe', stripeAdapter],
+  ['twilio', twilioAdapter],
 ]);
 
 /**

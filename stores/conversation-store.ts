@@ -15,8 +15,9 @@
 
 import * as React from 'react';
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/middleware';
 import { useEventMesh } from '@/lib/event-mesh/mesh';
+import { UniversalWidgetDefinition } from '@/lib/universal-widget/schema';
 
 /**
  * Wizard stage identifiers
@@ -79,6 +80,11 @@ export interface InferredWidget {
 }
 
 /**
+ * Visualization type options for Stage 3
+ */
+export type VisualizationType = 'list' | 'table' | 'cards' | 'metric' | 'chart';
+
+/**
  * Conversation Store State
  */
 interface ConversationStore {
@@ -87,6 +93,13 @@ interface ConversationStore {
   messages: ConversationMessage[];
   extractedIntent: UserIntent | null;
   inferredWidget: InferredWidget | null;
+
+  // Stage 3-4 state (visualization & preview)
+  selectedVisualization: VisualizationType | null;
+  generatedSchema: UniversalWidgetDefinition | null;
+  schemaValidationError: string | null;
+  previewData: any | null;
+  isDeploying: boolean;
 
   // Derived state
   isComplete: boolean;
@@ -99,8 +112,17 @@ interface ConversationStore {
   setInferredWidget: (widget: InferredWidget) => void;
   reset: () => void;
 
+  // Stage 3-4 actions
+  setVisualization: (type: VisualizationType) => void;
+  setSchema: (schema: UniversalWidgetDefinition) => void;
+  validateSchema: (schema: any) => { valid: boolean; error?: string };
+  setPreviewData: (data: any) => void;
+  setDeploying: (deploying: boolean) => void;
+  resetWizard: () => void;
+
   // Helper actions
   progressToNextStage: () => void;
+  goToPreviousStage: () => void;
   getMessagesForStage: (stage: WizardStage) => ConversationMessage[];
 }
 
@@ -112,28 +134,48 @@ const createInitialState = () => ({
   messages: [],
   extractedIntent: null,
   inferredWidget: null,
+  selectedVisualization: null,
+  generatedSchema: null,
+  schemaValidationError: null,
+  previewData: null,
+  isDeploying: false,
   isComplete: false,
   canProgressToNextStage: false,
 });
 
 /**
+ * Stage order for wizard flow
+ */
+const STAGE_ORDER: WizardStage[] = [
+  'problem_discovery',
+  'clarifying_questions',
+  'visualization',
+  'preview',
+  'deploy',
+];
+
+/**
  * Get next stage in the wizard flow
  */
 function getNextStage(currentStage: WizardStage): WizardStage | null {
-  const stageOrder: WizardStage[] = [
-    'problem_discovery',
-    'clarifying_questions',
-    'visualization',
-    'preview',
-    'deploy',
-  ];
-
-  const currentIndex = stageOrder.indexOf(currentStage);
-  if (currentIndex === -1 || currentIndex === stageOrder.length - 1) {
+  const currentIndex = STAGE_ORDER.indexOf(currentStage);
+  if (currentIndex === -1 || currentIndex === STAGE_ORDER.length - 1) {
     return null; // No next stage
   }
 
-  return stageOrder[currentIndex + 1];
+  return STAGE_ORDER[currentIndex + 1];
+}
+
+/**
+ * Get previous stage in the wizard flow
+ */
+function getPreviousStage(currentStage: WizardStage): WizardStage | null {
+  const currentIndex = STAGE_ORDER.indexOf(currentStage);
+  if (currentIndex === -1 || currentIndex === 0) {
+    return null; // No previous stage
+  }
+
+  return STAGE_ORDER[currentIndex - 1];
 }
 
 /**
@@ -153,14 +195,12 @@ function canProgress(state: ConversationStore): boolean {
       return state.inferredWidget !== null;
 
     case 'visualization':
-      // Need at least one exchange (user selected visualization)
-      return state.messages.filter((m) => m.role === 'user').length >= 2;
+      // Need visualization selection
+      return state.selectedVisualization !== null;
 
     case 'preview':
-      // Need user confirmation
-      return state.messages.some(
-        (m) => m.role === 'user' && m.content.toLowerCase().includes('yes')
-      );
+      // Need generated schema with no validation errors
+      return state.generatedSchema !== null && state.schemaValidationError === null;
 
     case 'deploy':
       // Final stage - always can progress (marks completion)
@@ -176,11 +216,16 @@ function canProgress(state: ConversationStore): boolean {
  *
  * Manages the entire wizard conversation state and integrates with Event Mesh
  * to publish stage transition events.
+ *
+ * Persistence: Wizard state is persisted to localStorage to survive page refreshes
+ * within the same session. This allows users to continue where they left off if
+ * they accidentally close the tab or navigate away.
  */
 export const useConversationStore = create<ConversationStore>()(
   devtools(
-    (set, get) => ({
-      ...createInitialState(),
+    persist(
+      (set, get) => ({
+        ...createInitialState(),
 
       /**
        * Add a message to the conversation
@@ -316,6 +361,133 @@ export const useConversationStore = create<ConversationStore>()(
       },
 
       /**
+       * Set the selected visualization type (Stage 3)
+       *
+       * @param type - Visualization type chosen by user
+       */
+      setVisualization: (type) => {
+        set((state) => ({
+          selectedVisualization: type,
+          canProgressToNextStage: canProgress({
+            ...state,
+            selectedVisualization: type,
+          }),
+        }));
+
+        // Publish visualization selection event
+        const eventMesh = useEventMesh.getState();
+        eventMesh.publish(
+          'wizard.visualization.selected',
+          {
+            visualizationType: type,
+            timestamp: new Date().toISOString(),
+          },
+          'conversation-store'
+        );
+
+        console.log('[ConversationStore] Visualization selected:', type);
+      },
+
+      /**
+       * Set the generated widget schema (Stage 4)
+       *
+       * Validates the schema and stores it for preview.
+       *
+       * @param schema - Generated widget definition
+       */
+      setSchema: (schema) => {
+        const validation = get().validateSchema(schema);
+
+        set((state) => ({
+          generatedSchema: schema,
+          schemaValidationError: validation.valid ? null : validation.error || 'Invalid schema',
+          canProgressToNextStage: canProgress({
+            ...state,
+            generatedSchema: schema,
+            schemaValidationError: validation.valid ? null : validation.error || 'Invalid schema',
+          }),
+        }));
+
+        // Publish schema generation event
+        const eventMesh = useEventMesh.getState();
+        eventMesh.publish(
+          'wizard.schema.generated',
+          {
+            schemaId: schema.metadata?.name,
+            valid: validation.valid,
+            timestamp: new Date().toISOString(),
+          },
+          'conversation-store'
+        );
+
+        console.log('[ConversationStore] Schema set:', schema.metadata?.name, 'Valid:', validation.valid);
+      },
+
+      /**
+       * Validate widget schema
+       *
+       * Checks if the schema has all required fields and correct structure.
+       *
+       * @param schema - Schema to validate
+       * @returns Validation result with error message if invalid
+       */
+      validateSchema: (schema) => {
+        try {
+          // Import validation function from schema.ts
+          const { validateWidgetDefinition } = require('@/lib/universal-widget/schema');
+          const result = validateWidgetDefinition(schema);
+
+          if (!result.valid) {
+            return {
+              valid: false,
+              error: result.errors.join(', '),
+            };
+          }
+
+          return { valid: true };
+        } catch (error) {
+          return {
+            valid: false,
+            error: error instanceof Error ? error.message : 'Unknown validation error',
+          };
+        }
+      },
+
+      /**
+       * Set preview data for testing the widget (Stage 4)
+       *
+       * This is sample data used to show how the widget will look with real data.
+       *
+       * @param data - Sample data matching the widget's field mappings
+       */
+      setPreviewData: (data) => {
+        set({ previewData: data });
+
+        console.log('[ConversationStore] Preview data set:', data?.length || 0, 'items');
+      },
+
+      /**
+       * Set deployment status (Stage 5)
+       *
+       * @param deploying - Whether deployment is in progress
+       */
+      setDeploying: (deploying) => {
+        set({ isDeploying: deploying });
+
+        console.log('[ConversationStore] Deploying:', deploying);
+      },
+
+      /**
+       * Reset wizard to initial state
+       *
+       * Clears all wizard state and returns to problem_discovery stage.
+       * Alias for reset() with clearer naming.
+       */
+      resetWizard: () => {
+        get().reset();
+      },
+
+      /**
        * Progress to the next stage in the wizard
        *
        * Validates that current stage requirements are met before progressing.
@@ -356,6 +528,61 @@ export const useConversationStore = create<ConversationStore>()(
       },
 
       /**
+       * Go to the previous stage in the wizard
+       *
+       * Navigates back one stage while preserving conversation state.
+       * Does NOT clear messages or inferred data - allows user to edit previous answers.
+       * Stage 1 (problem_discovery) cannot go back.
+       */
+      goToPreviousStage: () => {
+        const state = get();
+        const previousStage = getPreviousStage(state.stage);
+
+        if (previousStage) {
+          // Reset stage-specific state when going back
+          const updates: Partial<ConversationStore> = {
+            stage: previousStage,
+          };
+
+          // Clear stage-specific data when going back
+          if (state.stage === 'visualization') {
+            // Going back from visualization to clarifying_questions
+            // Keep messages and inferredWidget so user can re-answer questions
+          } else if (state.stage === 'preview') {
+            // Going back from preview to visualization
+            updates.schemaValidationError = null;
+            updates.previewData = null;
+          } else if (state.stage === 'deploy') {
+            // Going back from deploy to preview
+            // Keep schema so user can review again
+          }
+
+          set(updates);
+
+          // Publish back navigation event
+          const eventMesh = useEventMesh.getState();
+          eventMesh.publish(
+            'wizard.stage.back',
+            {
+              fromStage: state.stage,
+              toStage: previousStage,
+              timestamp: new Date().toISOString(),
+            },
+            'conversation-store'
+          );
+
+          console.log(
+            `[ConversationStore] Back navigation: ${state.stage} → ${previousStage}`
+          );
+        } else {
+          console.warn(
+            '[ConversationStore] Cannot go back - already at first stage:',
+            state.stage
+          );
+        }
+      },
+
+      /**
        * Get messages filtered by stage
        *
        * Useful for displaying conversation history within a specific stage.
@@ -369,7 +596,23 @@ export const useConversationStore = create<ConversationStore>()(
         // and filter messages by timestamp ranges
         return get().messages;
       },
-    }),
+      }),
+      {
+        name: 'conversation-wizard-storage',
+        // Only persist critical state, not derived values or actions
+        partialize: (state) => ({
+          stage: state.stage,
+          messages: state.messages,
+          extractedIntent: state.extractedIntent,
+          inferredWidget: state.inferredWidget,
+          selectedVisualization: state.selectedVisualization,
+          generatedSchema: state.generatedSchema,
+          schemaValidationError: state.schemaValidationError,
+          previewData: state.previewData,
+          // Don't persist: isDeploying, isComplete, canProgressToNextStage (derived)
+        }),
+      }
+    ),
     { name: 'ConversationStore' }
   )
 );

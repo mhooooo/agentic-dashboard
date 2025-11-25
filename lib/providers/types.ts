@@ -8,7 +8,7 @@
 /**
  * Supported provider names
  */
-export type ProviderName = 'github' | 'jira' | 'linear' | 'slack' | 'calendar';
+export type ProviderName = 'github' | 'jira' | 'linear' | 'slack' | 'calendar' | 'stripe' | 'twilio';
 
 /**
  * Stored credentials for a provider
@@ -19,6 +19,9 @@ export interface ProviderCredentials {
   url?: string; // Instance URL (for Jira)
   refresh_token?: string; // OAuth refresh token (for automatic token refresh)
   expires_at?: number; // Token expiration timestamp in milliseconds (for OAuth)
+  accountSid?: string; // Twilio Account SID
+  authToken?: string; // Twilio Auth Token
+  phoneNumber?: string; // Twilio Phone Number (optional, for sending SMS)
   [key: string]: any; // Additional provider-specific fields
 }
 

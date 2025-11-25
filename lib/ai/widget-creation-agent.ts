@@ -22,7 +22,7 @@ export interface UserIntent {
  * Inferred widget from problem description
  */
 export interface InferredWidget {
-  provider: 'github' | 'jira' | 'linear' | 'slack' | 'calendar';
+  provider: 'github' | 'jira' | 'linear' | 'slack' | 'calendar' | 'stripe' | 'twilio';
   type: string;               // "pr-list", "issue-board", "calendar-grid", etc.
   confidence: number;         // 0.0-1.0 (how confident the AI is in this inference)
 }
@@ -83,14 +83,20 @@ Available providers and use cases:
 - **Jira**: Sprint planning, issue tracking, project management, workflows
 - **Linear**: Task management, sprint tracking, issue tracking
 - **Slack**: Team messages, channel activity, notifications, mentions
-- **Google Calendar**: Meetings, events, schedules, availability
+- **Calendar**: Meetings, events, schedules, availability (Google Calendar)
+- **Stripe**: Payment tracking, revenue metrics, subscription management, customer billing, payment dashboards
+- **Twilio**: SMS alerts, text notifications, SMS reminders, phone notifications, messaging automation
 
 Examples of problem → widget mapping:
 1. "Track pull requests" → GitHub PR widget (pr-list)
-2. "See team calendar" → Google Calendar widget (calendar-grid)
+2. "See team calendar" → Calendar widget (calendar-grid)
 3. "Sprint tasks" → Jira issue board widget (issue-board)
 4. "Slack messages" → Slack message list widget (message-list)
 5. "Monitor Linear tickets" → Linear issue list widget (issue-list)
+6. "Track customer payments" → Stripe payments widget (payment-list)
+7. "Monitor subscription revenue" → Stripe revenue widget (revenue-metrics)
+8. "Send SMS alerts" → Twilio SMS widget (sms-alerts)
+9. "Text message notifications" → Twilio messaging widget (message-notifications)
 
 ## Confidence Scoring
 
@@ -141,8 +147,9 @@ Always respond with valid JSON in this format:
 3. **Mentions provider explicitly**: Use that provider
    - "GitHub pull requests" → Confidence = 1.0
 
-4. **Business vs dev tools**: Default to dev tools (current providers)
-   - Future: will support Stripe, Twilio for business workflows
+4. **Business vs dev tools**: Map to appropriate domain
+   - Dev tools: GitHub, Jira, Linear (code, projects, tasks)
+   - Business tools: Stripe, Twilio (payments, communications)
 `;
 
 /**
@@ -226,6 +233,70 @@ export const PROBLEM_TO_WIDGET_EXAMPLES = [
         provider: 'linear' as const,
         type: 'issue-list',
         confidence: 0.9,
+      },
+    },
+  },
+  {
+    problem: 'Track customer payments and revenue',
+    expectedResponse: {
+      extractedIntent: {
+        problemSolved: 'Manual payment tracking across Stripe dashboard',
+        painPoint: 'Time wasted checking payment status, delayed revenue insights',
+        goal: 'Real-time payment and revenue visibility',
+        expectedOutcome: 'Instant payment notifications and revenue metrics',
+      },
+      inferredWidget: {
+        provider: 'stripe' as const,
+        type: 'payment-list',
+        confidence: 0.9,
+      },
+    },
+  },
+  {
+    problem: 'Monitor subscription billing and customer accounts',
+    expectedResponse: {
+      extractedIntent: {
+        problemSolved: 'Manual subscription management in Stripe',
+        painPoint: 'Missed failed payments, unclear customer status',
+        goal: 'Centralized subscription dashboard',
+        expectedOutcome: 'Track all subscriptions and billing issues',
+      },
+      inferredWidget: {
+        provider: 'stripe' as const,
+        type: 'subscription-list',
+        confidence: 0.85,
+      },
+    },
+  },
+  {
+    problem: 'Send SMS alerts for important events',
+    expectedResponse: {
+      extractedIntent: {
+        problemSolved: 'Manual notification checking',
+        painPoint: 'Missing critical alerts, delayed response time',
+        goal: 'Automated SMS notifications',
+        expectedOutcome: 'Instant SMS alerts for important events',
+      },
+      inferredWidget: {
+        provider: 'twilio' as const,
+        type: 'sms-alerts',
+        confidence: 0.9,
+      },
+    },
+  },
+  {
+    problem: 'Text reminders for upcoming deadlines',
+    expectedResponse: {
+      extractedIntent: {
+        problemSolved: 'Missed deadlines and forgotten tasks',
+        painPoint: 'No proactive reminders, relying on memory',
+        goal: 'Automated SMS reminders',
+        expectedOutcome: 'Never miss a deadline with text alerts',
+      },
+      inferredWidget: {
+        provider: 'twilio' as const,
+        type: 'sms-reminders',
+        confidence: 0.85,
       },
     },
   },

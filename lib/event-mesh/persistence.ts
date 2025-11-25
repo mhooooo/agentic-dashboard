@@ -44,15 +44,22 @@ declare global {
   var devEventStore: DevEventStore | undefined;
 }
 
-// Initialize dev store
-const devEventStore: DevEventStore = global.devEventStore ?? {
-  events: [],
-  narratives: new Map(),
-};
+// Initialize dev store (use globalThis for browser/Node.js compatibility)
+function getDevEventStore(): DevEventStore {
+  if (typeof globalThis !== 'undefined' && globalThis.devEventStore) {
+    return globalThis.devEventStore;
+  }
+  return {
+    events: [],
+    narratives: new Map(),
+  };
+}
 
-// Persist store across hot-reloads
-if (process.env.NODE_ENV === 'development') {
-  global.devEventStore = devEventStore;
+const devEventStore: DevEventStore = getDevEventStore();
+
+// Persist store across hot-reloads (only in Node.js/server context)
+if (process.env.NODE_ENV === 'development' && typeof globalThis !== 'undefined') {
+  globalThis.devEventStore = devEventStore;
 }
 
 /**
